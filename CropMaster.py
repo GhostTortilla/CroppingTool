@@ -24,11 +24,18 @@ import math
 class App(CTk):
 
     def __init__(self):
+        """
+        Description
+        -----------
+        Init Function for the Main Application
+        """
+        
         CTk.__init__(self)
         CTk._set_appearance_mode(self, "dark")
         self.WindowWidth = 1920
         self.WindowHeight = 1080
-        CTk.title(self, "Cropping Tool 0.2.0")
+        self.Version = "0.2.0" # <- Version Control (Might need to get moved to a more accesible and easier to maintain place)
+        CTk.title(self, f"Cropping Tool{self.Version}")
         CTk.iconbitmap(self, default=Icon)
         
         # Get screen width and height
@@ -53,7 +60,7 @@ class App(CTk):
         
         # Load the Resources and create the layout
         self.LoadResources()
-        self.Layout()
+        self.MainLayout()
         
         # Red Square Information
         self.SquareObject = None
@@ -80,273 +87,417 @@ class App(CTk):
         }
 
         # Version Control
-        VERSION = {"Major": 0, "Minor": 2, "Patch": 0}
+        VERSION = {"Major": int(self.Version[0]), "Minor": int(self.Version[2]), "Patch": int(self.Version[4])}
         UpdateCheck(self, VERSION)
     
     def LoadResources(self):
+        """
+        Description
+        -----------
+        Function to Load all the assets and create the images
+        """
+        
+        # Get the Asset Base Directory
         AssetBaseDirectory = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         
-        ### Arrow Images ###
+        # Load and create the Normal Arrow Images
         self.UpArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "UpArrow.png")), None, (25, 30))
         self.DownArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "DownArrow.png")), None, (25, 30))
         self.LeftArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "LeftArrow.png")), None, (25, 30))
         self.RightArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "RightArrow.png")), None, (25, 30))
         
-        ### Grey Arrow Images ###
+        # Load and create the Grey Arrow Images
         self.GreyUpArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "GreyUpArrow.png")), None, (25, 30))
         self.GreyDownArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "GreyDownArrow.png")), None, (25, 30))
         self.GreyLeftArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "GreyLeftArrow.png")), None, (25, 30))
         self.GreyRightArrowImage = CTkImage(IMG.open(os.path.join(AssetBaseDirectory, "Assets", "GreyRightArrow.png")), None, (25, 30))
     
-    def Layout(self):
-        ### Switches ###
+    def MainLayout(self):
+        """
+        Description
+        -----------
+        Main Layout Function, All Layout related functions are bundled here.\n
+        To execute as one in the startup process
+        """
+        
+        # Switch Placement
+        self.SwitchLayout()
+        
+        # Button Placement
+        self.ButtonLayout()
+        
+        # Info Frame Placement
+        self.InfoFrameLayout()
+        
+        # Red Square Placement
+        self.RedSquareLayout()
+        
+        # Arrow Placement
+        self.PositionArrowLayout()
+    
+    def SwitchLayout(self):
+        """
+        Description
+        -----------
+        Function for adding switches to the Layout
+        """
+        
         # Overwrite existing files Switch
+        # - When Toggled, will overwrite all existing files in the output directory
         self.OverwriteExistingFiles = CTkSwitch(self, text="Overwrite Files", font=(self.WidgetFont, 25), switch_height=25, switch_width=50)
         self.OverwriteExistingFiles.place(relx=0.266, rely=0.83, anchor="center")
         self.CreateToolTip(self.OverwriteExistingFiles, "Overwrite Existing Files\nIf enabled, will replace existing files in the Output Directory.")
 
         # Keep Red Square Size Switch
+        # - When Toggled, will keep the size of the red square when moving to the next image
         self.KeepRedSquareSizeSwitch = CTkSwitch(self, text="Keep Crop Size", font=(self.WidgetFont, 25), switch_height=25, switch_width=50)
         self.KeepRedSquareSizeSwitch.place(relx=0.268, rely=0.88, anchor="center")
         self.CreateToolTip(self.KeepRedSquareSizeSwitch,"Keep Selection Size\nIf enabled, will preserve the size of the selected area.")
                 
         # Resize Directory Switch
+        # - When Toggled, will resize all images in the selected directory (Only applicable when using the Resize Button)
         self.ResizeDirectory = CTkSwitch(self, text="Resize Directory", font=(self.WidgetFont, 25), switch_height=25, switch_width=50)
         self.ResizeDirectory.place(relx=0.27, rely=0.93, anchor="center")
         self.CreateToolTip(self.ResizeDirectory, "Resize Directory Toggle\nIf enabled, resizes all images in the selected directory.")
         
         # Lock Aspect Ratio Switch
+        # - When Toggled, will lock the aspect ratio of the image
         self.LockAspectRatio = CTkSwitch(self, text="Lock Aspect Ratio", font=(self.WidgetFont, 25), switch_height=25, switch_width=50)
         self.LockAspectRatio.place(relx=0.275, rely=0.98, anchor="center")
-        self.CreateToolTip(self.LockAspectRatio, "Aspect Ratio Lock\nWill disable the Height slider and adjust the Height based on the Width.")
-        
-        ### Buttons ###
+        self.CreateToolTip(self.LockAspectRatio, "Aspect Ratio Lock\nAuto Adjusts opposite dimension (W/H) when enabled.")
+
+    def ButtonLayout(self):
+        """
+        Description
+        -----------
+        Function for adding buttons to the Layout
+        """
+
         # Select Directory Button
+        # - Opens a file dialog to select a directory, Needs to be used in order to unlock the rest of the buttons etc.
         SelectDirectoryButton = CTkButton(self, text="Select Directory", font=(self.WidgetFont, 20), command=self.LoadDirectory, width=35, height=30)
         SelectDirectoryButton.place(relx=0.045, rely=0.7175, anchor="center")
         
         # Open Output Dir Button
+        # - Opens the output directory in the file explorer if it exists, else opens the Current Working Directory CWD.
         self.OpenOutputDirButton = CTkButton(self, text="Open Output", font=(self.WidgetFont, 20), command=self.OpenOutputDirectory, width=35, height=30, state="disabled", fg_color="grey")
         self.OpenOutputDirButton.place(relx=0.038, rely=0.7575, anchor="center")
         
         # Crop Button
+        # - Crops the image and saves it to the output directory if it exists, else creates it.
         self.CropButton = CTkButton(self, text="Crop", font=(self.WidgetFont, 30), command=self.CropAndSaveImageMain, state="disabled", fg_color="grey")
         self.CropButton.place(relx=0.45, rely=0.975, anchor="center")
         
-        # Resize Button
-        self.ResizeButton = CTkButton(self, text="Resize", font=(self.WidgetFont, 30), command=self.ResizeImageWindow, state="disabled", fg_color="grey")
-        self.ResizeButton.place(relx=0.55, rely=0.975, anchor="center")
-        
         # Next Image Button
+        # - Goes to the next image
         self.NextImageButton = CTkButton(self, text=">>>", font=(self.WidgetFont, 25), command=self.NextImage, state="disabled", fg_color="grey")
         self.NextImageButton.place(relx=0.55, rely=0.725, anchor="center")
         
         # Previous Image Button
+        # - Goes back to the previous image
         self.PreviousImageButton = CTkButton(self, text="<<<", font=(self.WidgetFont, 25), command=self.PreviousImage, state="disabled", fg_color="grey")
         self.PreviousImageButton.place(relx=0.45, rely=0.725, anchor="center")
 
         # Reset Square Button
+        # - Resets the red square to the original size of the image
         self.ResetSquareButton = CTkButton(self, text="Reset Square", font=(self.WidgetFont, 20), command=self.ResetSquare, state="disabled", fg_color="grey", hover_color="red")
         self.ResetSquareButton.place(relx=0.125, rely=0.7175, anchor="center")
         self.CreateToolTip(self.ResetSquareButton, "Reset Square\nResets the Red Square to the original size of the image.")
         
-        # Exit Button
-        self.ExitButton = CTkButton(self, text="Exit", font=(self.WidgetFont, 20), command=self.destroy, hover_color="red")
-        self.ExitButton.place(relx=0.0425, rely=0.976, anchor="center")
-        
         # Show Info Button
+        # - Opens the Information Window
         self.ShowInfoButton = CTkButton(self, text="Show Info", font=(self.WidgetFont, 20), command=self.ShowInformation, hover_color="#3B88C3")
         self.ShowInfoButton.place(relx=0.0425, rely=0.925, anchor="center")
         
-        ### Original Dimension Info ###
+        # Resize Button
+        # - Opens the Resize Window
+        self.ResizeButton = CTkButton(self, text="Resize", font=(self.WidgetFont, 30), command=self.ResizeImageWindow, state="disabled", fg_color="grey")
+        self.ResizeButton.place(relx=0.55, rely=0.975, anchor="center")
+        
+        # Exit Button
+        # - Exits the program
+        self.ExitButton = CTkButton(self, text="Exit", font=(self.WidgetFont, 20), command=self.destroy, hover_color="red")
+        self.ExitButton.place(relx=0.0425, rely=0.976, anchor="center")
+
+    def InfoFrameLayout(self):
+        """
+        Description
+        -----------
+        Function for adding the Info Dimension Frame to the Layout\n
+        
+        Comment Information\n
+        - \# Short Info
+        - \# - Detail Info
+        - \# + Extra Info
+        
+        """
+
+        # Base Variables for Positioning
         LabelGap = 30
         InputGap = 65
-        # Original Dimension Info Frame
-        self.OriginalDimensionInfoFrame = CTkFrame(self, width=275, height=310)
-        self.OriginalDimensionInfoFrame.place(relx=0.825, y=765)
-        self.OriginalDimensionInfoFrame.configure(border_color="black", border_width=5)
-        self.OriginalDimensionInfoFrame.lower()
         
-        # Original Dimension Info Label
-        self.OriginalDimensionLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Original Dimensions", font=(self.WidgetFont, 25), text_color="black")
-        self.OriginalDimensionLabel.place(relx=0.5, y=20, anchor="center")
-        self.OriginalDimensionLabel.lift()
-        self.CreateToolTip(self.OriginalDimensionLabel, "Original Dimensions\nThe dimensions of the image before the crop.")
+        # Base Frame
+        # - Frame for the Original Dimension Information to put all the widgets on / inside
+        # + IF abbreviation for InfoFrame will get used in the rest of the code
+        self.InfoFrame = CTkFrame(self, width=275, height=310)
+        self.InfoFrame.place(relx=0.825, y=765)
+        self.InfoFrame.configure(border_color="black", border_width=5)
+        self.InfoFrame.lower()
         
-        # Original Dimension Info Width Label
-        self.OriginalDimensionoWidthLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.OriginalDimensionoWidthLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
-        self.OriginalDimensionoWidthLabel.lift()
+        # Info Label
+        # - Label for the Original Dimension Information
+        self.IF_OriginalDimension_InfoLabel = CTkLabel(self.InfoFrame, text="Original Dimensions", font=(self.WidgetFont, 25), text_color="black")
+        self.IF_OriginalDimension_InfoLabel.place(relx=0.5, y=20, anchor="center")
+        self.IF_OriginalDimension_InfoLabel.lift()
+        # - Tooltip for the Original Dimension Information
+        self.CreateToolTip(self.IF_OriginalDimension_InfoLabel, "Original Dimensions\nThe dimensions of the image before the crop.")
         
-        # Original Dimension Info Height Label
-        self.OriginalDimensionHeightLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.OriginalDimensionHeightLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
-        self.OriginalDimensionHeightLabel.lift()
+        # Original Dimensions Width Label
+        # - Label for the Original Dimension Width
+        self.IF_OriginalDimension_WidthLabel = CTkLabel(self.InfoFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_OriginalDimension_WidthLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
+        self.IF_OriginalDimension_WidthLabel.lift()
         
-        # Original Dimension Info Width Value Label
-        self.OriginalDimensionWidthVar = StringVar(value="0")
-        self.OriginalDimensionWidthValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.OriginalDimensionWidthVar, state="disabled")
-        self.OriginalDimensionWidthValueLabel.place(relx=0.25, y=20 + InputGap, anchor="center")
-        self.OriginalDimensionWidthValueLabel.configure(justify="center")
-        self.OriginalDimensionWidthValueLabel.lift()
+        # Original Dimensions Height Label
+        # - Label for the Original Dimension Height
+        self.IF_OriginalDimension_HeightLabel = CTkLabel(self.InfoFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_OriginalDimension_HeightLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
+        self.IF_OriginalDimension_HeightLabel.lift()
         
-        # Original Dimension Info Height Value Label
-        self.OriginalDimensionHeightVar = StringVar(value="0")
-        self.OriginalDimensionHeightValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.OriginalDimensionHeightVar, state="disabled")
-        self.OriginalDimensionHeightValueLabel.place(relx=0.75, y=20 + InputGap, anchor="center")
-        self.OriginalDimensionHeightValueLabel.configure(justify="center")
-        self.OriginalDimensionHeightValueLabel.lift()
+        # Original Dimension Width Value Label
+        # - Label for the Original Dimension Width Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_OriginalDimension_WidthVar = StringVar(value="0")
+        self.IF_OriginalDimension_WidthValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.IF_OriginalDimension_WidthVar, state="disabled")
+        self.IF_OriginalDimension_WidthValueLabel.place(relx=0.25, y=20 + InputGap, anchor="center")
+        self.IF_OriginalDimension_WidthValueLabel.configure(justify="center")
+        self.IF_OriginalDimension_WidthValueLabel.lift()
         
-        # Original Dimension Info New Dimensions Label
-        self.NewDimensionsLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="New Dimensions", font=(self.WidgetFont, 25), text_color="black")
-        self.NewDimensionsLabel.place(relx=0.5, y=120, anchor="center")
-        self.NewDimensionsLabel.lift()
-        self.CreateToolTip(self.NewDimensionsLabel, "New Dimensions\nThe dimensions of the image after the crop.")
+        # Original Dimension Height Value Label
+        # - Label for the Original Dimension Height Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_OriginalDimension_HeightVar = StringVar(value="0")
+        self.IF_OriginalDimension_HeightValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.IF_OriginalDimension_HeightVar, state="disabled")
+        self.IF_OriginalDimension_HeightValueLabel.place(relx=0.75, y=20 + InputGap, anchor="center")
+        self.IF_OriginalDimension_HeightValueLabel.configure(justify="center")
+        self.IF_OriginalDimension_HeightValueLabel.lift()
         
-        # Original Dimension Info New Dimensions Width Label
-        self.NewDimensionsWidthLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.NewDimensionsWidthLabel.place(relx=0.25, y=120 + LabelGap, anchor="center")
-        self.NewDimensionsWidthLabel.lift()
+        # New Dimensions
+        # - Label for the New Dimension Information
+        self.IF_NewDimension_InfoLabel = CTkLabel(self.InfoFrame, text="New Dimensions", font=(self.WidgetFont, 25), text_color="black")
+        self.IF_NewDimension_InfoLabel.place(relx=0.5, y=120, anchor="center")
+        self.IF_NewDimension_InfoLabel.lift()
+        self.CreateToolTip(self.IF_NewDimension_InfoLabel, "New Dimensions\nThe dimensions of the image after the crop. (Full Size)")
         
-        # Original Dimension Info New Dimensions Height Label
-        self.NewDimensionsHeightLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.NewDimensionsHeightLabel.place(relx=0.75, y=120 + LabelGap, anchor="center")
-        self.NewDimensionsHeightLabel.lift()
+        # New Dimensions Width Label
+        # - Label for the New Dimension Width
+        self.IF_NewDimension_WidthLabel = CTkLabel(self.InfoFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_NewDimension_WidthLabel.place(relx=0.25, y=120 + LabelGap, anchor="center")
+        self.IF_NewDimension_WidthLabel.lift()
         
-        # Original Dimension Info New Dimensions Width Value Label
-        self.NewDimensionsWidthVar = StringVar(value="0")
-        self.NewDimensionsWidthValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.NewDimensionsWidthVar, state="disabled")
-        self.NewDimensionsWidthValueLabel.place(relx=0.25, y=120 + InputGap, anchor="center")
-        self.NewDimensionsWidthValueLabel.configure(justify="center")
-        self.NewDimensionsWidthValueLabel.lift()
+        # New Dimensions Height Label
+        # - Label for the New Dimension Height
+        self.IF_NewDimension_HeightLabel = CTkLabel(self.InfoFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_NewDimension_HeightLabel.place(relx=0.75, y=120 + LabelGap, anchor="center")
+        self.IF_NewDimension_HeightLabel.lift()
         
-        # Original Dimension Info New Dimensions Height Value Label
-        self.NewDimensionsHeightVar = StringVar(value="0")
-        self.NewDimensionsHeightValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.NewDimensionsHeightVar, state="disabled")
-        self.NewDimensionsHeightValueLabel.place(relx=0.75, y=120 + InputGap, anchor="center")
-        self.NewDimensionsHeightValueLabel.configure(justify="center")
-        self.NewDimensionsHeightValueLabel.lift()
+        # New Dimension Width Value Label
+        # - Label for the New Dimension Width Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_NewDimension_WidthVar = StringVar(value="0")
+        self.IF_NewDimension_WidthValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.IF_NewDimension_WidthVar, state="disabled")
+        self.IF_NewDimension_WidthValueLabel.place(relx=0.25, y=120 + InputGap, anchor="center")
+        self.IF_NewDimension_WidthValueLabel.configure(justify="center")
+        self.IF_NewDimension_WidthValueLabel.lift()
+        
+        # New Dimension Height Value Label
+        # - Label for the New Dimension Height Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_NewDimension_HeightVar = StringVar(value="0")
+        self.IF_NewDimension_HeightValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17), text_color="white", width=80, height=20, textvariable=self.IF_NewDimension_HeightVar, state="disabled")
+        self.IF_NewDimension_HeightValueLabel.place(relx=0.75, y=120 + InputGap, anchor="center")
+        self.IF_NewDimension_HeightValueLabel.configure(justify="center")
+        self.IF_NewDimension_HeightValueLabel.lift()
         
         # Aspect Ratio Label
-        self.AspectRatioLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Aspect Ratio", font=(self.WidgetFont, 25), text_color="black")
-        self.AspectRatioLabel.place(relx=0.5, y=220, anchor="center")
-        self.AspectRatioLabel.lift()
-        self.CreateToolTip(self.AspectRatioLabel, "Aspect Ratio\nThe aspect ratio of the image.")
+        # - Label for the Aspect Ratio Information
+        self.IF_AspectRatioLabel = CTkLabel(self.InfoFrame, text="Aspect Ratio", font=(self.WidgetFont, 25), text_color="black")
+        self.IF_AspectRatioLabel.place(relx=0.5, y=220, anchor="center")
+        self.IF_AspectRatioLabel.lift()
+        self.CreateToolTip(self.IF_AspectRatioLabel, "Aspect Ratio\nThe aspect ratio of the image.")
         
         # Aspect Ratio Original Label
-        self.AspectRatioOriginalLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Image", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.AspectRatioOriginalLabel.place(relx=0.25, y=220 + LabelGap, anchor="center")
-        self.AspectRatioOriginalLabel.lift()
+        # - Label for the Aspect Ratio Original
+        self.IF_Original_AspectRatioLabel = CTkLabel(self.InfoFrame, text="Image", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_Original_AspectRatioLabel.place(relx=0.25, y=220 + LabelGap, anchor="center")
+        self.IF_Original_AspectRatioLabel.lift()
         
         # Aspect Ratio New Label
-        self.AspectRatioNewLabel = CTkLabel(self.OriginalDimensionInfoFrame, text="Crop", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.AspectRatioNewLabel.place(relx=0.75, y=220 + LabelGap, anchor="center")
-        self.AspectRatioNewLabel.lift()
+        # - Label for the Aspect Ratio New
+        self.IF_New_AspectRatioLabel = CTkLabel(self.InfoFrame, text="Crop", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.IF_New_AspectRatioLabel.place(relx=0.75, y=220 + LabelGap, anchor="center")
+        self.IF_New_AspectRatioLabel.lift()
         
         # Aspect Ratio Original Value Label
-        self.AspectRatioOriginalVar = StringVar(value="0 : 0")
-        self.AspectRatioOriginalValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17, "bold"), text_color="white", width=100, height=20, textvariable=self.AspectRatioOriginalVar, state="disabled")
-        self.AspectRatioOriginalValueLabel.place(relx=0.25, y=220 + InputGap, anchor="center")
-        self.AspectRatioOriginalValueLabel.configure(justify="center")
-        self.AspectRatioOriginalValueLabel.lift()
+        # - Label for the Aspect Ratio Original Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_Original_AspectRatioVar = StringVar(value="0 : 0")
+        self.IF_Original_AspectRatioValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17, "bold"), text_color="white", width=100, height=20, textvariable=self.IF_Original_AspectRatioVar, state="disabled")
+        self.IF_Original_AspectRatioValueLabel.place(relx=0.25, y=220 + InputGap, anchor="center")
+        self.IF_Original_AspectRatioValueLabel.configure(justify="center")
+        self.IF_Original_AspectRatioValueLabel.lift()
         
         # Aspect Ratio New Value Label
-        self.AspectRatioNewVar = StringVar(value="0 : 0")
-        self.AspectRatioNewValueLabel = CTkEntry(self.OriginalDimensionInfoFrame, placeholder_text="0", font=(self.WidgetFont, 17, "bold"), text_color="white", width=100, height=20, textvariable=self.AspectRatioNewVar, state="disabled")
-        self.AspectRatioNewValueLabel.place(relx=0.75, y=220 + InputGap, anchor="center")
-        self.AspectRatioNewValueLabel.configure(justify="center")
-        self.AspectRatioNewValueLabel.lift()
+        # - Label for the Aspect Ratio New Value
+        # + Disabled by default, Enabled when a directory has been selected
+        self.IF_New_AspectRatioVar = StringVar(value="0 : 0")
+        self.IF_New_AspectRatioValueLabel = CTkEntry(self.InfoFrame, placeholder_text="0", font=(self.WidgetFont, 17, "bold"), text_color="white", width=100, height=20, textvariable=self.IF_New_AspectRatioVar, state="disabled")
+        self.IF_New_AspectRatioValueLabel.place(relx=0.75, y=220 + InputGap, anchor="center")
+        self.IF_New_AspectRatioValueLabel.configure(justify="center")
+        self.IF_New_AspectRatioValueLabel.lift()
+
+    def RedSquareLayout(self):
+        """
+        Description
+        -----------
+        Function for adding the Red Square Frame to the Layout\n
         
-        ### Red Square Controls ###
+        Comment Information\n
+        - \# Short Info
+        - \# - Detail Info
+        - \# + Extra Info
+        
+        """
+        
+        # Base Variables for Positioning
+        LabelGap = 30
+        InputGap = 65
+        
         # Red Square Frame
+        # - Frame for the Red Square Information to put all the widgets on / inside
+        # + RS abbreviation for RedSquareFrame will get used in the rest of the code
         self.RedSquareFrame = CTkFrame(self, width=350, height=310)
         self.RedSquareFrame.place(relx=0.625, y=765)
         self.RedSquareFrame.configure(border_color="black", border_width=5)
         self.RedSquareFrame.lower()
         
-        # Red Square Frame Dimensions Label
-        self.SquareDimensionsLabel = CTkLabel(self.RedSquareFrame, text="Square Dimensions", font=(self.WidgetFont, 25), text_color="black")
-        self.SquareDimensionsLabel.place(relx=0.5, y=20, anchor="center")
-        self.SquareDimensionsLabel.lift()
-        self.CreateToolTip(self.SquareDimensionsLabel, "Square Dimensions\nThe dimensions of the Red Crop Square.")
+        # Red Square Dimensions Label
+        # - Label for the Red Square Dimensions
+        self.RS_DimensionsLabel = CTkLabel(self.RedSquareFrame, text="Square Dimensions", font=(self.WidgetFont, 25), text_color="black")
+        self.RS_DimensionsLabel.place(relx=0.5, y=20, anchor="center")
+        self.RS_DimensionsLabel.lift()
+        # - Tooltip for the Red Square Dimensions
+        self.CreateToolTip(self.RS_DimensionsLabel, "Square Dimensions\nThe dimensions of the Red Crop Square.")
 
-        # Red Square Frame Width Input Label
-        self.HeightInputLabel = CTkLabel(self.RedSquareFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.HeightInputLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
-        self.HeightInputLabel.lift()
+        # Red Square Height Input Label
+        # - Label for the Red Square Height Input
+        self.RS_HeightInputLabel = CTkLabel(self.RedSquareFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.RS_HeightInputLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
+        self.RS_HeightInputLabel.lift()
         
-        # Red Square Frame Height Input Label
-        self.RedSquareWidthInputLabel = CTkLabel(self.RedSquareFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.RedSquareWidthInputLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
-        self.RedSquareWidthInputLabel.lift()
+        # Red Square Width Input Label
+        # - Label for the Red Square Width Input
+        self.RS_WidthInputLabel = CTkLabel(self.RedSquareFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
+        self.RS_WidthInputLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
+        self.RS_WidthInputLabel.lift()
 
-        # Red Square Width Input
-        self.RedSquareImageHeightVar = StringVar(value="0")
-        self.RedSquareHeightInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RedSquareImageHeightVar)
-        self.RedSquareHeightInput.place(relx=0.25, y=20 + InputGap, anchor="center")
-        self.RedSquareHeightInput.configure(justify="center")
-        self.RedSquareHeightInput.lift()
+        # Red Square Height Input
+        # - Input for the Red Square Height
+        # + Enabled by Default, Is controlled by the Custom Aspect Ratio Switch
+        self.RS_ImageHeightVar = StringVar(value="0")
+        self.RS_HeightInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RS_ImageHeightVar)
+        self.RS_HeightInput.place(relx=0.25, y=20 + InputGap, anchor="center")
+        self.RS_HeightInput.configure(justify="center")
+        self.RS_HeightInput.lift()
         
         # Red Square Height Input
-        self.RedSquareImageWidthVar = StringVar(value="0")
-        self.RedSquareWidthInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RedSquareImageWidthVar)
-        self.RedSquareWidthInput.place(relx=0.75, y=20 + InputGap, anchor="center")
-        self.RedSquareWidthInput.configure(justify="center")
-        self.RedSquareWidthInput.lift()
+        # - Input for the Red Square Width
+        # + Enabled by Default, Is controlled by the Custom Aspect Ratio Switch
+        self.RS_ImageWidthVar = StringVar(value="0")
+        self.RS_WidthInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RS_ImageWidthVar)
+        self.RS_WidthInput.place(relx=0.75, y=20 + InputGap, anchor="center")
+        self.RS_WidthInput.configure(justify="center")
+        self.RS_WidthInput.lift()
         
         # Update Red Square Button
-        self.UpdateSquareButton = CTkButton(self.RedSquareFrame, text="Update", font=(self.WidgetFont, 20), command=self.UpdateRedSquare, hover_color="#3B88C3", state="disabled", fg_color="grey")
-        self.UpdateSquareButton.place(relx=0.25, y=130, anchor="center")
+        # - Button for updating the Red Square size
+        self.RS_UpdateSquareButton = CTkButton(self.RedSquareFrame, text="Update", font=(self.WidgetFont, 20), command=self.UpdateRedSquare, hover_color="#3B88C3", state="disabled", fg_color="grey")
+        self.RS_UpdateSquareButton.place(relx=0.25, y=130, anchor="center")
         
         # Center Red Square Button
-        self.CenterSquareButton = CTkButton(self.RedSquareFrame, text="Center", font=(self.WidgetFont, 20), command=self.CenterRedSquare, hover_color="#3B88C3", state="disabled", fg_color="grey")
-        self.CenterSquareButton.place(relx=0.75, y=130, anchor="center")
+        # - Button for centering the Red Square on the image
+        self.RS_CenterSquareButton = CTkButton(self.RedSquareFrame, text="Center", font=(self.WidgetFont, 20), command=self.CenterRedSquare, hover_color="#3B88C3", state="disabled", fg_color="grey")
+        self.RS_CenterSquareButton.place(relx=0.75, y=130, anchor="center")
         
-        # Add Traces to the Red Square Input Fields
-        self.RedSquareImageHeightVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Height"))
-        self.RedSquareImageWidthVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Width"))
+        # Traces to follow the Width and Height Inputs for automatic updates when locks are placed
+        self.RS_ImageHeightVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Height"))
+        self.RS_ImageWidthVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Width"))
         
-        # Red Square Custom Aspect Ratio Label
-        self.CustomAspectRatioLabel = CTkLabel(self.RedSquareFrame, text="Custom Aspect Ratio", font=(self.WidgetFont, 25), text_color="black")
-        self.CustomAspectRatioLabel.place(relx=0.5, y=170, anchor="center")
-        self.CustomAspectRatioLabel.lift()
+        # Custom Aspect Ratio Label
+        # - Label for the Custom Aspect Ratio
+        self.RS_CustomAspectRatioLabel = CTkLabel(self.RedSquareFrame, text="Custom Aspect Ratio", font=(self.WidgetFont, 25), text_color="black")
+        self.RS_CustomAspectRatioLabel.place(relx=0.5, y=170, anchor="center")
+        self.RS_CustomAspectRatioLabel.lift()
         
-        # Custom Aspect Ratio X Entry
-        self.CustomAspectRatioXVar = StringVar(value="Height")
-        self.CustomAspectRatioXInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Height", textvariable=self.CustomAspectRatioXVar, state="disabled")
-        self.CustomAspectRatioXInput.place(relx=0.25, y=205, anchor="center")
-        self.CustomAspectRatioXInput.configure(justify="center", border_color="red", border_width=2)
-        self.CustomAspectRatioXInput.lift()
+        # Custom Aspect Ratio Height Value Entry
+        # - Entry for the Custom Aspect Ratio Height Value
+        # + Disabled by Default, Is controlled by the Custom Aspect Ratio Switch
+        self.RS_CustomAspectRatioXVar = StringVar(value="Height")
+        self.RS_CustomAspectRatioXInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Height", textvariable=self.RS_CustomAspectRatioXVar, state="disabled")
+        self.RS_CustomAspectRatioXInput.place(relx=0.25, y=205, anchor="center")
+        self.RS_CustomAspectRatioXInput.configure(justify="center", border_color="red", border_width=2)
+        self.RS_CustomAspectRatioXInput.lift()
         
-        # Custom Aspect Ratio Y Entry
-        self.CustomAspectRatioYVar = StringVar(value="Width")
-        self.CustomAspectRatioYInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Width", textvariable=self.CustomAspectRatioYVar, state="disabled")
-        self.CustomAspectRatioYInput.place(relx=0.75, y=205, anchor="center")
-        self.CustomAspectRatioYInput.configure(justify="center", border_color="red", border_width=2)
+        # Custom Aspect Ratio Width Value Entry
+        # - Entry for the Custom Aspect Ratio Width Value
+        # + Disabled by Default, Is controlled by the Custom Aspect Ratio Switch
+        self.RS_CustomAspectRatioYVar = StringVar(value="Width")
+        self.RS_CustomAspectRatioYInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Width", textvariable=self.RS_CustomAspectRatioYVar, state="disabled")
+        self.RS_CustomAspectRatioYInput.place(relx=0.75, y=205, anchor="center")
+        self.RS_CustomAspectRatioYInput.configure(justify="center", border_color="red", border_width=2)
         
-        # Switch to use Custom Aspect Ratio
+        # Custom Aspect Ratio Switch
+        # - Switch for enabling the Custom Aspect Ratio
+        # + Enables the Custom Aspect Ratio Inputs
         self.CustomAspectRatioSwitch = CTkSwitch(self.RedSquareFrame, text="Use Custom Aspect Ratio", font=(self.WidgetFont, 20), switch_height=20, switch_width=40, command=self.EnableCustomAspectRatio)
         self.CustomAspectRatioSwitch.place(relx=0.5, y=240, anchor="center")
         self.CreateToolTip(self.CustomAspectRatioSwitch, "Use Custom Aspect Ratio\nIf enabled, will use the custom aspect ratio.")
         
-        # Lock Width and Height Switch
+        # Lock Width Height Switch
+        # - Switch for locking the Width and Height of the Red Square
+        # + Toggles between which value is locked, this is decided on which side the switch is on
         self.LockWidthHeightSwitchSide = BooleanVar(value=False)
         self.LockWidthHeightSwitch = CTkSwitch(self.RedSquareFrame, text="", switch_height=20, switch_width=50, command=self.LockCustomAspectRatio, progress_color="red", fg_color="grey", font=(self.WidgetFont, 20), state="disabled", variable=self.LockWidthHeightSwitchSide)
         self.LockWidthHeightSwitch.place(relx=0.575, y=280, anchor="center")
         self.CreateToolTip(self.LockWidthHeightSwitch, "Lock Width\nIf enabled, will lock the width of the Red Square.")
         
-        # Lock Height Label
+        # Lock Width Label
+        # - Label for the Lock Width
         self.LockWidthLabel = CTkLabel(self.RedSquareFrame, text="Lock Height", font=(self.WidgetFont, 20), text_color="lightgrey")
         self.LockWidthLabel.place(relx=0.25, y=250 + LabelGap, anchor="center")
         self.LockWidthLabel.lift()
         
         # Lock Width Label
+        # - Label for the Lock Height
         self.LockHeightLabel = CTkLabel(self.RedSquareFrame, text="Lock Width", font=(self.WidgetFont, 20), text_color="lightgrey")
         self.LockHeightLabel.place(relx=0.75, y=250 + LabelGap, anchor="center")
         self.LockHeightLabel.lift()
         
-        ### ARROW CONFIG ###
-        # Arrow Button Locations and Controls
+    def PositionArrowLayout(self):
+        """
+        Description
+        -----------
+        Function for adding the Red Square Frame to the Layout\n
+        
+        Comment Information\n
+        - \# Short Info
+        - \# - Detail Info
+        - \# + Extra Info
+        
+        """
+        
+        # Base Variables for Positioning
+        # - Spacing between the buttons and starting positions
         SideButtonSpacing = 1.8
         DownButtonSpacing = 2.3
         ButtonHeight = 30 / 1080
@@ -355,48 +506,103 @@ class App(CTk):
         StartY = 0.775
         
         # Up Button
+        # - Button for moving the Red Square Up
         self.UpButton = CTkButton(self, command=lambda: self.PressButton("Up"), image=self.UpArrowImage, fg_color="#3B88C3", width=30, height=30, hover_color="#3B88C3", text="", border_width=0, border_spacing=0)
         self.UpButton.place(relx=StartX, rely=StartY, anchor="center")
+        
         # Down Button
+        # - Button for moving the Red Square Down
         self.DownButton = CTkButton(self, command=lambda: self.PressButton("Down"), image=self.DownArrowImage, fg_color="#3B88C3", width=30, height=30, hover_color="#3B88C3", text="", border_width=0, border_spacing=0)
         self.DownButton.place(relx=StartX, rely=StartY + DownButtonSpacing * ButtonHeight + 0.01, anchor="center")
+        
         # Left Button
+        # - Button for moving the Red Square Left
         self.LeftButton = CTkButton(self, command=lambda: self.PressButton("Left"), image=self.LeftArrowImage, fg_color="#3B88C3", width=30, height=30, hover_color="#3B88C3", text="", border_width=0, border_spacing=0)
         self.LeftButton.place(relx=StartX - SideButtonSpacing * ButtonWidth, rely=StartY + ButtonHeight + 0.01, anchor="center")
+        
         # Right Button
+        # - Button for moving the Red Square Right
         self.RightButton = CTkButton(self, command=lambda: self.PressButton("Right"), image=self.RightArrowImage, fg_color="#3B88C3", width=30, height=30, hover_color="#3B88C3", text="", border_width=0, border_spacing=0)
         self.RightButton.place(relx=StartX + SideButtonSpacing * ButtonWidth, rely=StartY + ButtonHeight + 0.01, anchor="center")
         
-        ### Arrow Fidelity Buttons ###
-        # Adjustment Input Field
+        # Adjustment Amount Entry
+        # - Entry for the Adjustment Amount
+        # + Controls the amount thq Direction Buttons should move the Red Square
         self.AdjustmentInput = CTkLabel(self, height=30, width=75, font=(self.WidgetFont, 20), text_color="white", justify="center", text="1", bg_color="#3B88C3")
         self.AdjustmentInput.place(relx=0.5, rely=0.915, anchor="center")
         self.CreateToolTip(self.AdjustmentInput, "Adjustment Input\nThe amount to move the Red Square by.", FontSize=20)
 
-        # +1 Button
+        # Increment +1 Button
+        # - Button for incrementing the Adjustment Input by 1
         self.PlusOneButton = CTkButton(self, text="+1", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("+", 1), width=50, hover_color="#3B88C3", corner_radius=10)
         self.PlusOneButton.place(relx=0.535, rely=0.915, anchor="center")
-        # +5 Button
+        
+        # Increment +5 Button
+        # - Button for incrementing the Adjustment Input by 5
         self.PlusFiveButton = CTkButton(self, text="+5", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("+", 5), width=50, hover_color="#3B88C3", corner_radius=10)
         self.PlusFiveButton.place(relx=0.562, rely=0.915, anchor="center")
-        # +10 Button
+        
+        # Increment +10 Button
+        # - Button for incrementing the Adjustment Input by 10
         self.PlusTenButton = CTkButton(self, text="+10", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("+", 10), width=50, hover_color="#3B88C3", corner_radius=10)
         self.PlusTenButton.place(relx=0.5904, rely=0.915, anchor="center")
-        # -1 Button
+        
+        # Decrement -1 Button
+        # - Button for decrementing the Adjustment Input by 1
         self.MinusOneButton = CTkButton(self, text="-1", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("-", 1), width=50, hover_color="#3B88C3", corner_radius=10, state="disabled", fg_color="grey")
         self.MinusOneButton.place(relx=0.465, rely=0.915, anchor="center")
-        # -5 Button
+        
+        # Decrement -5 Button
+        # - Button for decrementing the Adjustment Input by 5
         self.MinusFiveButton = CTkButton(self, text="-5", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("-", 5), width=50, hover_color="#3B88C3", corner_radius=10, state="disabled", fg_color="grey")
         self.MinusFiveButton.place(relx=0.438, rely=0.915, anchor="center")
-        # -10 Button
+        
+        # Decrement -10 Button
+        # - Button for decrementing the Adjustment Input by 10
         self.MinusTenButton = CTkButton(self, text="-10", font=(self.WidgetFont, 20), command=lambda: self.UpdateAdjustmentLabel("-", 10), width=50, hover_color="#3B88C3", corner_radius=10, state="disabled", fg_color="grey")
         self.MinusTenButton.place(relx=0.4105, rely=0.915, anchor="center")
 
     def CreateToolTip(self, Widget, Text: str, FontSize: int = 20):
-        # Create a tooltip from the given text and widget
+        """
+        Description
+        -----------
+        Returns a tooltip for a given widget with the given text.\n
+
+        Parameters
+        ----------
+        Widget: :class:`CTkWidget`
+            The widget to add the tooltip to.
+        
+        Text: :class:`str`
+            The text to display in the tooltip.
+        
+        FontSize: :class:`int`
+            The font size of the tooltip text. Default is 20.
+
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
+        # Create the tooltip
         CTkToolTip(widget=Widget, message=Text, font=(self.WidgetFont, FontSize), delay=0.1, border_color="red", border_width=2, bg_color="black", alpha=1.0)
     
     def EnableDisableIncrement(self, CurrentValue: int):
+        """
+        Description
+        -----------
+        Enables or Disables the Increment Buttons based on the Current Value.\n
+
+        Parameters
+        ----------
+        CurrentValue: :class:`int`
+            The current value of the Adjustment Input.
+
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
         Buttons = {
             "up": {"button": self.UpButton, "condition": CurrentValue < self.CanvasMaxHeight},
             "down": {"button": self.DownButton, "condition": CurrentValue < self.CanvasMaxHeight},
@@ -420,45 +626,102 @@ class App(CTk):
                 self.ButtonStatus[Button] = "disabled"
     
     def UpdateAdjustmentLabel(self, Type: str, Value: int):
-        # Grab the current value of the Adjustment Label
+        """
+        Description
+        -----------
+        Updates the Adjustment Label based on the Type and Value.\n
+
+        Parameters
+        ----------
+        Type: :class:`str`
+            The type of update to do. Can be either "+" or "-". (Add or Subtract)
+        
+        Value: :class:`int`
+            The value to add or subtract from the Adjustment Label.
+
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
+        # Get the Current Value of the Adjustment Label
         CurrentValue = int(self.AdjustmentInput.cget("text"))
 
         # If the Type is to Increment the value
         if Type == "+":
             CurrentValue += Value
             if CurrentValue > self.WindowWidth:
+                # Display a Messagebox if the value is greater than the Width of the window
                 CTkMessagebox(title="Info", message="Can't be greater than the Width of the window.", icon="info")
                 return
             else:
+                # Update the Adjustment Label
                 self.AdjustmentInput.configure(text=CurrentValue)
+                # Enable or Disable the Increment Buttons
                 self.EnableDisableIncrement(CurrentValue)
         
         # If the Type is to Decrement the value
         elif Type == "-":
             CurrentValue -= Value
             if CurrentValue < 1:
+                # Display a Messagebox if the value is less than 1
                 CTkMessagebox(title="Info", message="Can't be less than 1.", icon="info")
                 return
             else:
+                # Update the Adjustment Label
                 self.AdjustmentInput.configure(text=CurrentValue)
+                # Enable or Disable the Increment Buttons
                 self.EnableDisableIncrement(CurrentValue)
-        # If the Type is invalid
+
+        # If the Type is not "+" or "-" just return
         else:
             return
     
-    def DisableInteract(self, button: CTkButton | CTkSwitch):
-        if button == self.UpButton:
-            button.configure(image=None)
-            button.configure(image=self.GreyUpArrowImage, state="disabled", fg_color="grey", border_color="red", border_width=2)
-        elif button == self.DownButton:
-            button.configure(image=None)
-            button.configure(image=self.GreyDownArrowImage, state="disabled", fg_color="grey", border_color="red", border_width=2)
-        elif isinstance(button, CTkButton):
-            button.configure(state="disabled", fg_color="grey")
-        elif isinstance(button, CTkSwitch):
-            button.configure(state="disabled", button_color="grey")
+    def DisableInteract(self, Widget: CTkButton | CTkSwitch):
+        """
+        Description
+        -----------
+        Disables the given Button or Switch\n
+
+        Parameters
+        ----------
+        Type: :class:`CTkButton` | :class:`CTkSwitch`
+            The widget to disable.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+
+        # Need to look into
+        if Widget == self.UpButton:
+            Widget.configure(image=None)
+            Widget.configure(image=self.GreyUpArrowImage, state="disabled", fg_color="grey", border_color="red", border_width=2)
+        elif Widget == self.DownButton:
+            Widget.configure(image=None)
+            Widget.configure(image=self.GreyDownArrowImage, state="disabled", fg_color="grey", border_color="red", border_width=2)
+        elif isinstance(Widget, CTkButton):
+            Widget.configure(state="disabled", fg_color="grey")
+        elif isinstance(Widget, CTkSwitch):
+            Widget.configure(state="disabled", button_color="grey")
             
     def EnableInteract(self, button: CTkButton | CTkSwitch):
+        """
+        Description
+        -----------
+        Enables the given Button or Switch\n
+
+        Parameters
+        ----------
+        Type: :class:`CTkButton` | :class:`CTkSwitch`
+            The widget to Enable.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
+        # Need to look into
         if button == self.UpButton:
             button.configure(image=None)
             button.configure(image=self.UpArrowImage, state="normal", fg_color="#3B88C3", border_width=0)
@@ -471,7 +734,26 @@ class App(CTk):
             button.configure(state="normal", button_color="#1F6AA5")
     
     def FadingInformationTextBox(self, Message: str, Duration: int = 5000):
-        # Create a Label with the given message and destroy it after 5 seconds
+        """
+        Description
+        -----------
+        Small Fading text in the Top Left Corner of the Window.\n
+        Possibility to add Buttons to the Fading Frame for later.\n
+
+        Parameters
+        ----------
+        Message: :class:`str`
+            The message to display in the Fading Label.
+        
+        Duration: :class:`int`
+            The duration in milliseconds to display the Fading Label. Default is 5000.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
+        # Create a Label with the given message and destroy it after 5 seconds (5000 Milliseconds)
         FadingLabel = CTkLabel(self, text=Message, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white")
         FadingLabel.place(relx=0.01, rely=0.01, anchor="nw")
         FadingLabel.lift()
@@ -484,6 +766,13 @@ class App(CTk):
         #FadingFrame.after(5000, FadingFrame.destroy)
     
     def OpenOutputDirectory(self):
+        """
+        Description
+        -----------
+        Opens the Output Directory.\n
+        Needs rework, is a little "Too Simple atm.".
+        """
+        
         # Open the Folder
         try:
             os.startfile(self.dir_path + "\\Output")
@@ -492,7 +781,15 @@ class App(CTk):
             os.startfile(os.getcwd())
     
     def ShowInformation(self):
-        # Information Canvas Popup
+        """
+        Description
+        -----------
+        Shows a Popup with Information about the differant values of the Program.\n
+        More Information will get added here later~
+        """
+        
+        # Create the Popup Window
+        # - The Popup Window is a Toplevel Widget, and will be placed in the center and on top of the main window
         InformationPopOut = CTkToplevel(self, width=500, height=500, fg_color="black")
         InformationPopOut.title("Information")
         InformationPopOut.geometry(f"500x500+{int(self.ScreenWidth / 2 - 250)}+{int(self.ScreenHeight / 2 - 250)}")
@@ -500,11 +797,13 @@ class App(CTk):
         InformationPopOut.lift()
         InformationPopOut.attributes("-topmost", True)
         
-        # Exit Button
+        # Information Exit Button
+        # - Button for closing the Information Popup
         InformationExitButton = CTkButton(InformationPopOut, text="Exit", font=(self.WidgetFont, 20), command=InformationPopOut.destroy, hover_color="red")
         InformationExitButton.place(relx=0.5, rely=0.95, anchor="center")
         
-        # Iterate over the data inside the InformationDictionary
+        # Information Title Labels and Values
+        # - Iterates over the Information Dict and places the Keys and Values in the Popup
         for Index, (Key, Value) in enumerate(self.InformationDictionary.items()):
             # Create the Key Label
             KeyLabel = CTkLabel(InformationPopOut, text=Key, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white")
@@ -517,101 +816,134 @@ class App(CTk):
             ValueLabel.lift()
 
     def UpdateRedSquareInput(self, WH: str):
+        """
+        Description
+        -----------
+        Updates the Red Square Input based on the Width or Height.\n
+
+        Parameters
+        ----------
+        WH: :class:`str`
+            The Width or Height to update the Red Square Input for.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+
         # Get the Max Width and Height
         MaxWidth = self.ResizedWidth
         MaxHeight = self.ResizedHeight
 
         # Ignore, when the Values are empty or 0
-        if self.RedSquareImageHeightVar.get() in ["", 0, "0"] or self.RedSquareImageWidthVar.get() in ["", 0, "0"]:
+        if self.RS_ImageHeightVar.get() in ["", 0, "0"] or self.RS_ImageWidthVar.get() in ["", 0, "0"]:
             return
 
         # Get the current values of the Width and Height
-        CurrentHeight = int(self.RedSquareImageHeightVar.get())
-        CurrentWidth = int(self.RedSquareImageWidthVar.get())
+        CurrentHeight = int(self.RS_ImageHeightVar.get())
+        CurrentWidth = int(self.RS_ImageWidthVar.get())
         
         if WH == "Width":
             # If the Width is greater than the Max Width
             if CurrentWidth > MaxWidth:
                 # Set the Width to the Max Width
-                self.RedSquareImageWidthVar.set(MaxWidth)
+                self.RS_ImageWidthVar.set(MaxWidth)
                 # If the Height is greater than the Max Height
                 if CurrentHeight > MaxHeight:
                     # Set the Height to the Max Height
-                    self.RedSquareImageHeightVar.set(MaxHeight)
+                    self.RS_ImageHeightVar.set(MaxHeight)
             # If the Height is greater than the Max Height
             elif CurrentHeight > MaxHeight:
                 # Set the Height to the Max Height
-                self.RedSquareImageHeightVar.set(MaxHeight)
+                self.RS_ImageHeightVar.set(MaxHeight)
                 # If the Width is greater than the Max Width
                 if CurrentWidth > MaxWidth:
                     # Set the Width to the Max Width
-                    self.RedSquareImageWidthVar.set(MaxWidth)
+                    self.RS_ImageWidthVar.set(MaxWidth)
         elif WH == "Height":
             # If the Height is greater than the Max Height
             if CurrentHeight > MaxHeight:
                 # Set the Height to the Max Height
-                self.RedSquareImageHeightVar.set(MaxHeight)
+                self.RS_ImageHeightVar.set(MaxHeight)
                 # If the Width is greater than the Max Width
                 if CurrentWidth > MaxWidth:
                     # Set the Width to the Max Width
-                    self.RedSquareImageWidthVar.set(MaxWidth)
+                    self.RS_ImageWidthVar.set(MaxWidth)
             # If the Width is greater than the Max Width
             elif CurrentWidth > MaxWidth:
                 # Set the Width to the Max Width
-                self.RedSquareImageWidthVar.set(MaxWidth)
+                self.RS_ImageWidthVar.set(MaxWidth)
                 # If the Height is greater than the Max Height
                 if CurrentHeight > MaxHeight:
                     # Set the Height to the Max Height
-                    self.RedSquareImageHeightVar.set(MaxHeight)
+                    self.RS_ImageHeightVar.set(MaxHeight)
         else:
             return
     
     def EnableCustomAspectRatio(self):
+        """
+        Description
+        -----------
+        Enables or Disables the Custom Aspect Ratio Inputs.\n
+        Manages the different widgets surrounding this. (Enabling / Disabling Buttons etc.)
+        """
+        
         if self.CustomAspectRatioSwitch.get() == 0:
             # Disable the Input fields for the Custom Aspect Ratio
-            self.CustomAspectRatioXInput.configure(state="disabled", border_color="red", text_color="grey")
-            self.CustomAspectRatioYInput.configure(state="disabled", border_color="red", text_color="grey")
+            self.RS_CustomAspectRatioXInput.configure(state="disabled", border_color="red", text_color="grey")
+            self.RS_CustomAspectRatioYInput.configure(state="disabled", border_color="red", text_color="grey")
             # Set the Variables to Width and Height again as a reset
-            self.CustomAspectRatioXVar.set("Height")
-            self.CustomAspectRatioYVar.set("Width")
+            self.RS_CustomAspectRatioXVar.set("Height")
+            self.RS_CustomAspectRatioYVar.set("Width")
             # Disable the LockWidthHeightSwitch
             self.LockWidthHeightSwitch.configure(state="disabled", button_color="grey", fg_color="grey")
             # For sanity enable and set both the Width and Height Input Fields tro default
-            self.RedSquareHeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            self.RedSquareWidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_HeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_WidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
             # Switch the LockWidthHeightSwitch to the Left
             self.LockWidthHeightSwitchSide.set(False)
         else:
             # Enable the Input fields for the Custom Aspect Ratio
-            self.CustomAspectRatioXInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            self.CustomAspectRatioYInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_CustomAspectRatioXInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_CustomAspectRatioYInput.configure(state="normal", border_color="#565B5E", text_color="white")
             # Set the variables to blank strings
-            self.CustomAspectRatioXVar.set("")
-            self.CustomAspectRatioYVar.set("")
+            self.RS_CustomAspectRatioXVar.set("")
+            self.RS_CustomAspectRatioYVar.set("")
             # Enable the LockWidthHeightSwitch
             self.LockWidthHeightSwitch.configure(state="normal", fg_color="red")
             # Disable the Height Input Field
-            self.RedSquareHeightInput.configure(state="disabled", border_color="red", text_color="grey")
+            self.RS_HeightInput.configure(state="disabled", border_color="red", text_color="grey")
             # Switch the LockWidthHeightSwitch to the Left
             self.LockWidthHeightSwitchSide.set(False)
     
     def LockCustomAspectRatio(self):
+        """
+        Description
+        -----------
+        Locks the Height Input of the Red Square if the Aspect Ratio Switch has been toggled.\n
+        """
+        
         # Check if the Custom Aspect Ratio has been enable first
         if self.CustomAspectRatioSwitch.get() == 0:
             return
         # Disable the height input field if the switch is toggled on
         if self.LockWidthHeightSwitch.get() == 1:
-            self.RedSquareHeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            self.RedSquareWidthInput.configure(state="disabled", border_color="red", text_color="grey")
+            self.RS_HeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_WidthInput.configure(state="disabled", border_color="red", text_color="grey")
         else:
-            self.RedSquareHeightInput.configure(state="disabled", border_color="red", text_color="grey")
-            self.RedSquareWidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            self.RS_HeightInput.configure(state="disabled", border_color="red", text_color="grey")
+            self.RS_WidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
             
-    
     def UpdateRedSquare(self):
+        """
+        Description
+        -----------
+        Brains behind the Red Square, needs some reworking to work with the new Custom Aspect Ratio Stuff.
+        """
+        
         # Get the New Width and Height
-        NewWidth = int(self.RedSquareImageWidthVar.get())
-        NewHeight = int(self.RedSquareImageHeightVar.get())
+        NewWidth = int(self.RS_ImageWidthVar.get())
+        NewHeight = int(self.RS_ImageHeightVar.get())
 
         # if the Aspect Ratio Switch is toggled on
         if self.LockAspectRatio.get() == 1:
@@ -626,7 +958,7 @@ class App(CTk):
         # If the Custom aspect ratio switch is toggled on
         if self.CustomAspectRatioSwitch.get() == 1:
             # Grab the Custom Aspect Ratio Values
-            CustomAspectWidth, CustomAspectHeight = int(self.CustomAspectRatioXVar.get()), int(self.CustomAspectRatioYVar.get())
+            CustomAspectWidth, CustomAspectHeight = int(self.RS_CustomAspectRatioXVar.get()), int(self.RS_CustomAspectRatioYVar.get())
             AspectRatioValue = CustomAspectWidth / CustomAspectHeight
             if NewWidth / NewHeight > AspectRatioValue:
                 NewHeight = math.ceil(NewWidth / AspectRatioValue)
@@ -652,17 +984,24 @@ class App(CTk):
         self.CommonDivisor = math.gcd(NewWidth, NewHeight)
         self.SimpleWidth = int(NewWidth / self.CommonDivisor)
         self.SimpleHeight = int(NewHeight / self.CommonDivisor)
-        self.AspectRatioNewVar.set(f"{self.SimpleWidth} : {self.SimpleHeight}")
+        self.IF_New_AspectRatioVar.set(f"{self.SimpleWidth} : {self.SimpleHeight}")
         
         # Update the New Dimensions Width and Height Labels
-        self.NewDimensionsWidthVar.set(int(NewWidth / self.Zoom))
-        self.NewDimensionsHeightVar.set(int(NewHeight / self.Zoom))
+        self.IF_NewDimension_WidthVar.set(int(NewWidth / self.Zoom))
+        self.IF_NewDimension_HeightVar.set(int(NewHeight / self.Zoom))
         
         # Update the Adjustment Input Field
-        self.RedSquareImageHeightVar.set(int(NewHeight))
-        self.RedSquareImageWidthVar.set(int(NewWidth))
+        self.RS_ImageHeightVar.set(int(NewHeight))
+        self.RS_ImageWidthVar.set(int(NewWidth))
         
     def CenterRedSquare(self):
+        """
+        Description
+        -----------
+        Function to Center the Red Square on the Image.\n
+        Not working a 100% Needs some more tweaks
+        """
+        
         # Get the width and height of the image
         ImageWidth = self.canvas.winfo_width()
         ImageHeight = self.canvas.winfo_height()
@@ -697,6 +1036,13 @@ class App(CTk):
         self.SquareObject.Update(X=SquareX + DifferenceX, Y=SquareY + DifferenceY)
 
     def LoadDirectory(self):
+        """
+        Description
+        -----------
+        Will Load all the images from the selected directory.\n
+        makes all Images accessible from the ImageFiles list for other functions to use.
+        """
+        
         # Select a directory and load all the images in it
         self.dir_path = filedialog.askdirectory(initialdir="./", title="Select a Directory")
         if not self.dir_path:
@@ -720,14 +1066,21 @@ class App(CTk):
         self.EnableInteract(self.ResizeButton)
         self.EnableInteract(self.ResetSquareButton)
         self.EnableInteract(self.CropButton)
-        self.EnableInteract(self.CenterSquareButton)
-        self.EnableInteract(self.UpdateSquareButton)
+        self.EnableInteract(self.RS_CenterSquareButton)
+        self.EnableInteract(self.RS_UpdateSquareButton)
 
         # Load the first image
         self.ImageIndex = 0
         self.LoadImage(self.ImageIndex)
 
     def CropAndSaveImageMain(self):
+        """
+        Description
+        -----------
+        Main Function for Cropping and Saving Images.\n
+        Will either crop all images in the directory or just the current image.
+        """
+        
         # Format the savepath to only show the last 2 folders and name. Replace rest with a ..
         SavePath = self.dir_path
         SavePath = SavePath.replace("\\", "/")
@@ -755,7 +1108,24 @@ class App(CTk):
             else:
                 pass
 
-    def CropAndSaveImage(self, imageName):
+    def CropAndSaveImage(self, ImageName: str):
+        """
+        Description
+        -----------
+        Crops and Saves the given image.\n
+        Crops and Saves the image to the Output directory, Controlled by the "CropAndSaveImage" Function.
+        
+        Parameters
+        ----------
+        ImageName: :class:`str`
+            The name of the image to crop and save.
+        
+        Returns
+        -------
+        Type: :class:`bool`
+            Returns True if the image was saved successfully, False if it wasn't.
+        """
+
         # Get the Squares X, Y, Width and Height
         SquareX = self.SquareObject.X
         SquareY = self.SquareObject.Y
@@ -769,7 +1139,7 @@ class App(CTk):
         FullCrop = (round(CropArea[0] / self.Zoom), round(CropArea[1] / self.Zoom), round(CropArea[2] / self.Zoom), round(CropArea[3] / self.Zoom))
         
         # Open the Original Image for converting
-        self.OriginalCropImage = IMG.open(f"{self.dir_path}/{imageName}")
+        self.OriginalCropImage = IMG.open(f"{self.dir_path}/{ImageName}")
         
         # Grab that Area from the scaled image and downscale the cropped bit to the original size
         CroppedImage = self.OriginalCropImage.crop(FullCrop).resize((self.ImageWidth, self.ImageHeight), IMG.Resampling.LANCZOS)
@@ -779,7 +1149,7 @@ class App(CTk):
             os.mkdir(f"{self.dir_path}/Output")
 
         ## Save the cropped image to the Output directory
-        OriginalImageName, OriginalImageExtension = os.path.splitext(imageName)
+        OriginalImageName, OriginalImageExtension = os.path.splitext(ImageName)
         CroppedImageName = f"{OriginalImageName}{OriginalImageExtension}"
         SavePath = os.path.join(f"{self.dir_path}/Output", CroppedImageName)
         if self.OverwriteExistingFiles.get() == True:
@@ -793,9 +1163,17 @@ class App(CTk):
             return False
     
     def NextImage(self):
+        """
+        Description
+        -----------
+        Loads the next image in the ImageFiles list and displays it.
+        """
+
+        # Disable the Next Image Button if the last image is reached
         if self.ImageIndex >= len(self.ImageFiles) - 2:
             self.DisableInteract(self.NextImageButton)
 
+        # Remove the Image from the Canvas and load the new image
         if self.ImageIndex < len(self.ImageFiles) - 1:
             self.ImageIndex += 1
             self.canvas.delete("all")
@@ -805,9 +1183,17 @@ class App(CTk):
             self.DisableInteract(self.NextImageButton)
 
     def PreviousImage(self):
+        """
+        Description
+        -----------
+        Loads the next image in the ImageFiles list and displays it.
+        """
+        
+        # Disable the Previous Image Button if the first image is reached
         if self.ImageIndex <= 1:
             self.DisableInteract(self.PreviousImageButton)
-            
+        
+        # Remove the Image from the Canvas and load the new image
         if self.ImageIndex > 0:
             self.ImageIndex -= 1
             self.canvas.delete("all")
@@ -817,6 +1203,12 @@ class App(CTk):
             self.DisableInteract(self.PreviousImageButton)
     
     def ResetSquare(self):
+        """
+        Description
+        -----------
+        Resets the Red Square to the original Size and Position.
+        """
+
         # Grab values for the Width, Height and Position of the Image
         Width = self.ImageWidth * self.Zoom
         Height = self.ImageHeight * self.Zoom
@@ -826,10 +1218,25 @@ class App(CTk):
         self.SquareObject.Update(X=X, Y=Y, Width=Width, Height=Height)
         
         # Update the Red Square Input Fields
-        self.RedSquareImageWidthVar.set(int(Width))
-        self.RedSquareImageHeightVar.set(int(Height))
+        self.RS_ImageWidthVar.set(int(Width))
+        self.RS_ImageHeightVar.set(int(Height))
 
     def PressButton(self, Direction: str):
+        """
+        Description
+        -----------
+        Function used by the four move buttons to move the Red Square around.
+        
+        Parameters
+        ----------
+        Direction: :class:`str`
+            The direction to move the square in. Can be either "Up", "Down", "Left" or "Right".
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
         # Check if there is an iamge present
         if self.ImageOnCanvas is None:
             CTkMessagebox(title="Error", message="Please select an image first.", icon="warning", option_1="Ok")
@@ -868,6 +1275,22 @@ class App(CTk):
                 self.SquareObject.Update(X=self.SquareObject.X + AdjustmentValue)
         
     def LoadImage(self, ImageNr: int):
+        """
+        Description
+        -----------
+        Loads the given image from the ImageFiles list and displays it on the canvas.\n
+        Adjusts different values to dispålay the correct data about the image.
+        
+        Parameters
+        ----------
+        ImageNr: :class:`int`
+            The index of the image to load from the ImageFiles list.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+
         # Load the image
         self.PreviewImage = IMG.open(f"{self.dir_path}/{self.ImageFiles[ImageNr]}")
         
@@ -881,11 +1304,11 @@ class App(CTk):
         self.CommonDivisor = math.gcd(self.ImageWidth, self.ImageHeight)
         self.SimpleWidth = int(self.ImageWidth / self.CommonDivisor)
         self.SimpleHeight = int(self.ImageHeight / self.CommonDivisor)
-        self.AspectRatioOriginalVar.set(f"{self.SimpleWidth} : {self.SimpleHeight}")
+        self.IF_Original_AspectRatioVar.set(f"{self.SimpleWidth} : {self.SimpleHeight}")
 
         # Update the Dimension Labels
-        self.OriginalDimensionWidthVar.set(self.ImageWidth)
-        self.OriginalDimensionHeightVar.set(self.ImageHeight)
+        self.IF_OriginalDimension_WidthVar.set(self.ImageWidth)
+        self.IF_OriginalDimension_HeightVar.set(self.ImageHeight)
 
         # Resize the image to fit the canvas
         CanvasWidth, CanvasHeight = self.canvas.winfo_width(), self.canvas.winfo_height()
@@ -928,25 +1351,31 @@ class App(CTk):
 
             # Create the Square Object and update the Red Square Input Fields
             self.SquareObject = Square(self.canvas, StartX, StartY, StoredWidth, StoredHeight, "red")
-            self.RedSquareImageWidthVar.set(StoredWidth)
-            self.RedSquareImageHeightVar.set(StoredHeight)
+            self.RS_ImageWidthVar.set(StoredWidth)
+            self.RS_ImageHeightVar.set(StoredHeight)
             self.SquareObject.Update(KeepSize=True)
         else:
             # Create the Square Object and update the Red Square Input Fields
             self.SquareObject = Square(self.canvas, self.ImageX, self.ImageY, self.ResizedWidth, self.ResizedHeight, "red")
-            self.RedSquareImageWidthVar.set(self.ResizedWidth)
-            self.RedSquareImageHeightVar.set(self.ResizedHeight)
+            self.RS_ImageWidthVar.set(self.ResizedWidth)
+            self.RS_ImageHeightVar.set(self.ResizedHeight)
             self.SquareObject.Update()
         
         # Store the Original Size of the image to reset the Square's size to the original size
         self.OriginalSize = (self.ImageX, self.ImageY, self.ImageX + self.ResizedWidth, self.ImageY + self.ResizedWidth)
 
         # Update the New Dimensions Labels
-        self.NewDimensionsWidthVar.set(round(self.SquareObject.Width / self.Zoom))
-        self.NewDimensionsHeightVar.set(round(self.SquareObject.Height / self.Zoom))
+        self.IF_NewDimension_WidthVar.set(round(self.SquareObject.Width / self.Zoom))
+        self.IF_NewDimension_HeightVar.set(round(self.SquareObject.Height / self.Zoom))
 
-    ### Resize Image Window ###
     def ResizeImageWindow(self):
+        """
+        Description
+        -----------
+        Seperate Window to Resize an Image to a new size.\n
+        Will resize the image to the given size and save it to the Output directory.
+        """
+        
         # Center the window on the screen
         self.ResizeWindow = CTkToplevel(self, width=400, height=300, fg_color="black")
         self.ResizeWindow.title("Resize Image")
@@ -1015,19 +1444,47 @@ class App(CTk):
         self.ResizeImageHeightVar.trace_add("write", lambda *args: self.ResizeUpdate("Height"))
     
     def ResizeBoxIsTriggered(self):
+        """
+        Description
+        -----------
+        Child Function for the ResizeImageWindow.\n
+        Will check if the Width or Height Lock is toggled on and disable the other one, else reset both.
+        """
+        
+        # If the Width Lock is toggled on, disable the Height Lock
         if self.ResizeWidthLock.get():
             self.ResizeHeightLock.configure(state="disabled", button_color="red")
             self.ResizeWidthLock.configure(state="normal", button_color="#377D08")
+        # If the Height Lock is toggled on, disable the Width Lock
         elif self.ResizeHeightLock.get():
             self.ResizeWidthLock.configure(state="disabled", button_color="red")
             self.ResizeHeightLock.configure(state="normal", button_color="#377D08")
+        # If neither are toggled on, enable both
         else:
             self.ResizeHeightLock.configure(state="normal", button_color="#D5D9DE")
             self.ResizeWidthLock.configure(state="normal", button_color="#D5D9DE")
     
     def ResizeUpdate(self, WH: str):
+        """
+        Description
+        -----------
+        Function which is triggered on the entry boxes in the ResizeImageWindow.\n
+        Will change the opposite value to keep the aspect ratio and prevent it from going out of bounds. (9999)
+        
+        Parameters
+        ----------
+        WH: :class:`str`
+            The Width or Height to update. Can be either "Width" or "Height".
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
+        # Max Size of the Width and Height (Can easily be bigger, but shouldn't be needed)
         MaxSize = 9999
     
+        # Section for Updating the Width when the Height is changed
         if WH == "Height":
             if self.ResizeImageHeightVar.get() == "" or self.ResizeImageHeightVar.get() == "0":
                 return
@@ -1051,6 +1508,8 @@ class App(CTk):
                     return
             else:
                 return
+
+        # Section for Updating the Height when the Width is changed
         elif WH == "Width":
             if self.ResizeImageWidthVar.get() == "" or self.ResizeImageWidthVar.get() == "0":
                 return
@@ -1072,10 +1531,18 @@ class App(CTk):
                 else:
                     self.ResizeImageWidthVar.set(int(NewSize))
                     return
+        
+        # If neither Width or Height are given in the argument, return
         else:
             return
 
     def ResizeImage(self):
+        """
+        Description
+        -----------
+        Function to Resize an Image to a new size.
+        """
+
         # Check if both Height and Width are filled in
         NewWidth = int(self.ResizeImageWidthVar.get())
         NewHeight = int(self.ResizeImageHeightVar.get())
@@ -1112,12 +1579,27 @@ class App(CTk):
             CTkMessagebox(title="Success", message=f"Resized {len(os.listdir(self.dir_path))} images.", icon="info", option_1="Ok")
             self.EnableInteract(self.OpenOutputDirButton)
         else:
+            # Display a CTkMessagebox with only 1 image resized
             CTkMessagebox(title="Success", message="Resized 1 image.", icon="info", option_1="Ok")
             self.EnableInteract(self.OpenOutputDirButton)
 
 ### Other Classes ###
 class Square:
+    """
+    Description
+    -----------
+    The Square Class is used to create a square on the canvas.\n
+    This Square is able to get manipulated around on the screen and is indicative on the area which will get cropped.\n
+    As Such it needs to get updated when the image is resized or moved, hence this class.
+    """
+    
     def __init__(self, Canvas: CTkCanvas, X: int, Y: int, Width: int, Height: int, Color="Red"):
+        """
+        Description
+        -----------
+        The Constructor for the Square Class.
+        """
+        
         self.Canvas = Canvas
         self.X = X
         self.Y = Y
@@ -1128,6 +1610,21 @@ class Square:
         self.SquareProperties = None
 
     def Draw(self, KeepSize=False):
+        """
+        Description
+        -----------
+        Draw Function for the Square Class.
+        
+        Parameters
+        ----------
+        KeepSize: :class:`bool`
+            If True, the Square will keep the same size as before, else it will update the SquareProperties.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+        
         if self.ID != None:
             self.Canvas.delete(self.ID)
         self.ID = self.Canvas.create_rectangle(self.X, self.Y, self.X + self.Width, self.Y + self.Height, outline=self.Color)
@@ -1137,6 +1634,29 @@ class Square:
             pass
 
     def Update(self, X=None, Y=None, Width=None, Height=None, KeepSize=False):
+        """
+        Description
+        -----------
+        Update Function for the Square Class. Initiates a redraw of the square with the updated values.
+        
+        Parameters
+        ----------
+        X: :class:`int`
+            The new X position of the square. Defaults to None.
+        Y: :class:`int`
+            The new Y position of the square. Defaults to None.
+        Width: :class:`int`
+            The new Width of the square. Defaults to None.
+        Height: :class:`int`
+            The new Height of the square. Defaults to None.
+        KeepSize: :class:`bool`
+            If True, the Square will keep the same size as before, else it will update the SquareProperties.
+        
+        Returns
+        -------
+        Type: :class:`None`
+        """
+
         # For better readability create a dict and go over the attrivutes.
         Attributes = {"X": X, "Y": Y, "Width": Width, "Height": Height}
         for Attribute, Value in Attributes.items():

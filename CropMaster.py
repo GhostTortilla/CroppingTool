@@ -35,7 +35,7 @@ class App(CTk):
         self.WindowWidth = 1920
         self.WindowHeight = 1080
         self.Version = "0.2.0" # <- Version Control (Might need to get moved to a more accesible and easier to maintain place)
-        CTk.title(self, f"Cropping Tool{self.Version}")
+        CTk.title(self, f"Cropping Tool {self.Version}")
         CTk.iconbitmap(self, default=Icon)
         
         # Get screen width and height
@@ -51,8 +51,8 @@ class App(CTk):
         
         # Translate above to be proportionate to new window size
         self.CanvasMaxHeight = 751
-        self.canvas = CTkCanvas(self, width=self.WindowWidth, height=self.CanvasMaxHeight, highlightthickness=0, bg="black")
-        self.canvas.place(relx=0.0, rely=0.0, anchor = "nw")
+        self.Canvas = CTkCanvas(self, width=self.WindowWidth, height=self.CanvasMaxHeight, highlightthickness=0, bg="black")
+        self.Canvas.place(relx=0.0, rely=0.0, anchor = "nw")
         self.ImageOnCanvas = None
         
         # Global Widget Variables
@@ -392,32 +392,36 @@ class App(CTk):
         # Red Square Height Input Label
         # - Label for the Red Square Height Input
         self.RS_HeightInputLabel = CTkLabel(self.RedSquareFrame, text="Height", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.RS_HeightInputLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
+        self.RS_HeightInputLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
         self.RS_HeightInputLabel.lift()
-        
+
         # Red Square Width Input Label
         # - Label for the Red Square Width Input
         self.RS_WidthInputLabel = CTkLabel(self.RedSquareFrame, text="Width", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.RS_WidthInputLabel.place(relx=0.75, y=20 + LabelGap, anchor="center")
+        self.RS_WidthInputLabel.place(relx=0.25, y=20 + LabelGap, anchor="center")
         self.RS_WidthInputLabel.lift()
 
         # Red Square Height Input
         # - Input for the Red Square Height
-        # + Enabled by Default, Is controlled by the Custom Aspect Ratio Switch
-        self.RS_ImageHeightVar = StringVar(value="0")
-        self.RS_HeightInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RS_ImageHeightVar)
-        self.RS_HeightInput.place(relx=0.25, y=20 + InputGap, anchor="center")
-        self.RS_HeightInput.configure(justify="center")
+        # + Disabled by Default, Is controlled by LoadDirectory
+        self.RS_ImageHeightVar = StringVar(value=0)
+        self.RS_HeightInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="0", textvariable=self.RS_ImageHeightVar, state="disabled")
+        self.RS_HeightInput.place(relx=0.75, y=20 + InputGap, anchor="center")
+        self.RS_HeightInput.configure(justify="center", border_color="red", border_width=2)
         self.RS_HeightInput.lift()
-        
-        # Red Square Height Input
+
+        # Red Square Width Input
         # - Input for the Red Square Width
-        # + Enabled by Default, Is controlled by the Custom Aspect Ratio Switch
-        self.RS_ImageWidthVar = StringVar(value="0")
-        self.RS_WidthInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="white", placeholder_text="0", textvariable=self.RS_ImageWidthVar)
-        self.RS_WidthInput.place(relx=0.75, y=20 + InputGap, anchor="center")
-        self.RS_WidthInput.configure(justify="center")
+        # + Disabled by Default, Is controlled by LoadDirectory
+        self.RS_ImageWidthVar = StringVar(value=0)
+        self.RS_WidthInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="0", textvariable=self.RS_ImageWidthVar, state="disabled")
+        self.RS_WidthInput.place(relx=0.25, y=20 + InputGap, anchor="center")
+        self.RS_WidthInput.configure(justify="center", border_color="red", border_width=2)
         self.RS_WidthInput.lift()
+        
+        # Traces to follow the Width and Height Inputs for automatic updates when locks are placed
+        self.RS_ImageHeightVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Height"))
+        self.RS_ImageWidthVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Width"))
         
         # Update Red Square Button
         # - Button for updating the Red Square size
@@ -429,59 +433,47 @@ class App(CTk):
         self.RS_CenterSquareButton = CTkButton(self.RedSquareFrame, text="Center", font=(self.WidgetFont, 20), command=self.CenterRedSquare, hover_color="#3B88C3", state="disabled", fg_color="grey")
         self.RS_CenterSquareButton.place(relx=0.75, y=130, anchor="center")
         
-        # Traces to follow the Width and Height Inputs for automatic updates when locks are placed
-        self.RS_ImageHeightVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Height"))
-        self.RS_ImageWidthVar.trace_add("write", lambda *args: self.UpdateRedSquareInput(WH="Width"))
-        
         # Custom Aspect Ratio Label
         # - Label for the Custom Aspect Ratio
         self.RS_CustomAspectRatioLabel = CTkLabel(self.RedSquareFrame, text="Custom Aspect Ratio", font=(self.WidgetFont, 25), text_color="black")
         self.RS_CustomAspectRatioLabel.place(relx=0.5, y=170, anchor="center")
         self.RS_CustomAspectRatioLabel.lift()
         
-        # Custom Aspect Ratio Height Value Entry
-        # - Entry for the Custom Aspect Ratio Height Value
-        # + Disabled by Default, Is controlled by the Custom Aspect Ratio Switch
-        self.RS_CustomAspectRatioXVar = StringVar(value="Height")
-        self.RS_CustomAspectRatioXInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Height", textvariable=self.RS_CustomAspectRatioXVar, state="disabled")
-        self.RS_CustomAspectRatioXInput.place(relx=0.25, y=205, anchor="center")
-        self.RS_CustomAspectRatioXInput.configure(justify="center", border_color="red", border_width=2)
-        self.RS_CustomAspectRatioXInput.lift()
-        
         # Custom Aspect Ratio Width Value Entry
         # - Entry for the Custom Aspect Ratio Width Value
         # + Disabled by Default, Is controlled by the Custom Aspect Ratio Switch
-        self.RS_CustomAspectRatioYVar = StringVar(value="Width")
-        self.RS_CustomAspectRatioYInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Width", textvariable=self.RS_CustomAspectRatioYVar, state="disabled")
-        self.RS_CustomAspectRatioYInput.place(relx=0.75, y=205, anchor="center")
+        self.RS_CustomAspectRatioXVar = StringVar(value="Width")
+        self.RS_CustomAspectRatioXInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Width", textvariable=self.RS_CustomAspectRatioXVar, state="disabled")
+        self.RS_CustomAspectRatioXInput.place(relx=0.25, y=205, anchor="center")  # Positioned on the left
+        self.RS_CustomAspectRatioXInput.configure(justify="center", border_color="red", border_width=2)
+
+        # Custom Aspect Ratio Height Value Entry
+        # - Entry for the Custom Aspect Ratio Height Value
+        # + Disabled by Default, Is controlled by the Custom Aspect Ratio Switch
+        self.RS_CustomAspectRatioYVar = StringVar(value="Height")
+        self.RS_CustomAspectRatioYInput = CTkEntry(self.RedSquareFrame, font=(self.WidgetFont, 20), bg_color="black", fg_color="black", text_color="grey", placeholder_text="Height", textvariable=self.RS_CustomAspectRatioYVar, state="disabled")
+        self.RS_CustomAspectRatioYInput.place(relx=0.75, y=205, anchor="center")  # Positioned on the right
         self.RS_CustomAspectRatioYInput.configure(justify="center", border_color="red", border_width=2)
+        
+        # Semi Colon Label
+        # - Label for the Semi Colon divider between the Custom Aspect Ratio Inputs
+        self.RS_CustomAspectRatioSemiColon = CTkLabel(self.RedSquareFrame, text=":", font=(self.WidgetFont, 25, "bold"), text_color="white")
+        self.RS_CustomAspectRatioSemiColon.place(relx=0.5, y=205, anchor="center")
+        self.RS_CustomAspectRatioSemiColon.lift()
         
         # Custom Aspect Ratio Switch
         # - Switch for enabling the Custom Aspect Ratio
         # + Enables the Custom Aspect Ratio Inputs
         self.CustomAspectRatioSwitch = CTkSwitch(self.RedSquareFrame, text="Use Custom Aspect Ratio", font=(self.WidgetFont, 20), switch_height=20, switch_width=40, command=self.EnableCustomAspectRatio)
-        self.CustomAspectRatioSwitch.place(relx=0.5, y=240, anchor="center")
+        self.CustomAspectRatioSwitch.place(relx=0.1, y=245, anchor="w")
         self.CreateToolTip(self.CustomAspectRatioSwitch, "Use Custom Aspect Ratio\nIf enabled, will use the custom aspect ratio.")
         
-        # Lock Width Height Switch
-        # - Switch for locking the Width and Height of the Red Square
-        # + Toggles between which value is locked, this is decided on which side the switch is on
-        self.LockWidthHeightSwitchSide = BooleanVar(value=False)
-        self.LockWidthHeightSwitch = CTkSwitch(self.RedSquareFrame, text="", switch_height=20, switch_width=50, command=self.LockCustomAspectRatio, progress_color="red", fg_color="grey", font=(self.WidgetFont, 20), state="disabled", variable=self.LockWidthHeightSwitchSide)
-        self.LockWidthHeightSwitch.place(relx=0.575, y=280, anchor="center")
-        self.CreateToolTip(self.LockWidthHeightSwitch, "Lock Width\nIf enabled, will lock the width of the Red Square.")
-        
-        # Lock Width Label
-        # - Label for the Lock Width
-        self.LockWidthLabel = CTkLabel(self.RedSquareFrame, text="Lock Height", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.LockWidthLabel.place(relx=0.25, y=250 + LabelGap, anchor="center")
-        self.LockWidthLabel.lift()
-        
-        # Lock Width Label
-        # - Label for the Lock Height
-        self.LockHeightLabel = CTkLabel(self.RedSquareFrame, text="Lock Width", font=(self.WidgetFont, 20), text_color="lightgrey")
-        self.LockHeightLabel.place(relx=0.75, y=250 + LabelGap, anchor="center")
-        self.LockHeightLabel.lift()
+        # Lock Center Switch
+        # - Switch to always keep the red square in the center upon editing
+        # + Enables the Lock Center Functionality
+        self.LockCenterSwitch = CTkSwitch(self.RedSquareFrame, text="Lock Square to Center", font=(self.WidgetFont, 20), switch_height=20, switch_width=40)
+        self.LockCenterSwitch.place(relx=0.1, y=285, anchor="w")
+        self.CreateToolTip(self.LockCenterSwitch, "Lock Center\nIf enabled, will keep the Red Square in the center when editing.")
         
     def PositionArrowLayout(self):
         """
@@ -836,47 +828,154 @@ class App(CTk):
         MaxHeight = self.ResizedHeight
 
         # Ignore, when the Values are empty or 0
-        if self.RS_ImageHeightVar.get() in ["", 0, "0"] or self.RS_ImageWidthVar.get() in ["", 0, "0"]:
+        if self.RS_ImageHeightVar.get() in ["", "0"] or self.RS_ImageWidthVar.get() in ["", "0"]:
             return
-
+        
+        # Check to see if input in the fields is numeric and greater than 0 (Greater than 0 might nopt be needed as dashes are technically removed...)
+        if not self.RS_ImageHeightVar.get().isnumeric() or not self.RS_ImageWidthVar.get().isnumeric() or int(self.RS_ImageHeightVar.get()) < 0 or int(self.RS_ImageWidthVar.get()) < 0:
+            # Will remove all non numeric characters from the input
+            self.RS_ImageHeightVar.set("".join([i for i in self.RS_ImageHeightVar.get() if i.isnumeric()]))
+            self.RS_ImageWidthVar.set("".join([i for i in self.RS_ImageWidthVar.get() if i.isnumeric()]))
+            return
+        
         # Get the current values of the Width and Height
         CurrentHeight = int(self.RS_ImageHeightVar.get())
         CurrentWidth = int(self.RS_ImageWidthVar.get())
         
         if WH == "Width":
-            # If the Width is greater than the Max Width
-            if CurrentWidth > MaxWidth:
-                # Set the Width to the Max Width
-                self.RS_ImageWidthVar.set(MaxWidth)
-                # If the Height is greater than the Max Height
-                if CurrentHeight > MaxHeight:
-                    # Set the Height to the Max Height
-                    self.RS_ImageHeightVar.set(MaxHeight)
-            # If the Height is greater than the Max Height
-            elif CurrentHeight > MaxHeight:
-                # Set the Height to the Max Height
-                self.RS_ImageHeightVar.set(MaxHeight)
-                # If the Width is greater than the Max Width
+            if self.LockAspectRatio.get() == 1:
+                # Update the Height Value according to the aspect ratio and make sure it is not greater than the Max Height
+                NewSize = CurrentWidth / (self.ImageWidth / self.ImageHeight)
+                if NewSize >= MaxHeight:
+                    self.RS_ImageHeightVar.set(int(MaxHeight))
+                    self.RS_ImageWidthVar.set(int(int(MaxHeight) * (self.ImageWidth / self.ImageHeight)))
+                elif CurrentWidth > MaxWidth:
+                    self.RS_ImageWidthVar.set(int(MaxWidth))
+                    self.RS_ImageHeightVar.set(int(int(MaxWidth) / (self.ImageWidth / self.ImageHeight)))
+                else:
+                    self.RS_ImageHeightVar.set(int(NewSize))
+                self.UpdateRedSquare()
+            # Check if the Custom Aspect Ratio is enabled
+            elif self.CustomAspectRatioSwitch.get() == 1:
+                # Calculate the Height based on the provided Aspect Ratio
+                AspectX = self.RS_CustomAspectRatioXVar.get()
+                AspectY = self.RS_CustomAspectRatioYVar.get()
+                # Check if the fields are numbers only and if both have values in them
+                if AspectX.isnumeric() and AspectY.isnumeric() and AspectX != "" and AspectY != "":
+                    # Calculate the Aspect Ratio
+                    CustomAspect = int(AspectX) / int(AspectY)
+                    print(CustomAspect)
+                else:
+                    # Message indicating something went wrong and that both fields should be filled
+                    self.FadingInformationTextBox("Both Custom Aspect Ratio Fields need to be a valid number.")
+                    return
+                # Check if the Custom Aspect Ratio is greater than 1 or less than 1
+                if CustomAspect > 1:
+                    NewHeight = math.ceil(CurrentWidth / CustomAspect)
+                    if NewHeight >= MaxHeight:
+                        NewHeight = MaxHeight
+                        NewWidth = math.ceil(NewHeight * CustomAspect)
+                        if NewWidth >= MaxWidth:
+                            NewWidth = MaxWidth
+                            NewHeight = math.ceil(NewWidth / CustomAspect)
+                    else:
+                        NewWidth = CurrentWidth
+                elif CustomAspect < 1:
+                    NewHeight = math.ceil(CurrentWidth / CustomAspect)
+                    if NewHeight >= MaxHeight:
+                        NewHeight = MaxHeight
+                        NewWidth = math.ceil(NewHeight * CustomAspect)
+                        if NewWidth >= MaxWidth:
+                            NewWidth = MaxWidth
+                            NewHeight = math.ceil(NewWidth / CustomAspect)
+                    else:
+                        NewWidth = CurrentWidth
+                else:
+                    return
+                # Final Check to see if the values are out of bounds and if so, set them to the max values
+                if NewWidth >= MaxWidth:
+                    NewWidth = MaxWidth
+                    NewHeight = math.ceil(NewWidth / CustomAspect)
+                elif NewHeight >= MaxHeight:
+                    NewHeight = MaxHeight
+                    NewWidth = math.ceil(NewHeight * CustomAspect)
+                # Update the Width and Height Input Fields
+                self.RS_ImageHeightVar.set(int(NewHeight))
+                self.RS_ImageWidthVar.set(int(NewWidth))
+                self.UpdateRedSquare()
+            else:
+                # Making sure the value entered does not exceed the maximum size of the image
                 if CurrentWidth > MaxWidth:
-                    # Set the Width to the Max Width
-                    self.RS_ImageWidthVar.set(MaxWidth)
+                    self.RS_ImageWidthVar.set(int(MaxWidth))
+                    self.UpdateRedSquare()
+                    return
         elif WH == "Height":
-            # If the Height is greater than the Max Height
-            if CurrentHeight > MaxHeight:
-                # Set the Height to the Max Height
-                self.RS_ImageHeightVar.set(MaxHeight)
-                # If the Width is greater than the Max Width
-                if CurrentWidth > MaxWidth:
-                    # Set the Width to the Max Width
-                    self.RS_ImageWidthVar.set(MaxWidth)
-            # If the Width is greater than the Max Width
-            elif CurrentWidth > MaxWidth:
-                # Set the Width to the Max Width
-                self.RS_ImageWidthVar.set(MaxWidth)
-                # If the Height is greater than the Max Height
+            if self.LockAspectRatio.get() == 1:
+                # Update the Width Value according to the aspect ratio and make sure it is not greater than the Max Width
+                NewSize = CurrentHeight * (self.ImageWidth / self.ImageHeight)
+                if NewSize >= MaxWidth:
+                    self.RS_ImageWidthVar.set(int(MaxWidth))
+                    self.RS_ImageHeightVar.set(int(int(MaxWidth) / (self.ImageWidth / self.ImageHeight)))
+                elif CurrentHeight > MaxHeight:
+                    self.RS_ImageHeightVar.set(int(MaxHeight))
+                    self.RS_ImageWidthVar.set(int(int(MaxHeight) * (self.ImageWidth / self.ImageHeight)))
+                else:
+                    self.RS_ImageWidthVar.set(int(NewSize))
+                self.UpdateRedSquare()
+            # Check if the Custom Aspect Ratio is enabled
+            elif self.CustomAspectRatioSwitch.get() == 1:
+                # Calculate the Width based on the provided Aspect Ratio
+                AspectX = self.RS_CustomAspectRatioXVar.get()
+                AspectY = self.RS_CustomAspectRatioYVar.get()
+                # Check if the fields are numbers only and if both have values in them
+                if AspectX.isnumeric() and AspectY.isnumeric() and AspectX != "" and AspectY != "":
+                    # Calculate the Aspect Ratio
+                    CustomAspect = int(AspectX) / int(AspectY)
+                else:
+                    # Message indicating something went wrong and that both fields should be filled
+                    self.FadingInformationTextBox("Both Custom Aspect Ratio Fields need to be a valid number.")
+                    return
+                # Check if the Custom Aspect Ratio is greater than 1 or less than 1
+                if CustomAspect > 1:
+                    NewWidth = math.ceil(CurrentHeight * CustomAspect)
+                    if NewWidth >= MaxWidth:
+                        NewWidth = MaxWidth
+                        NewHeight = math.ceil(NewWidth / CustomAspect)
+                        if NewHeight >= MaxHeight:
+                            NewHeight = MaxHeight
+                            NewWidth = math.ceil(NewHeight * CustomAspect)
+                    else:
+                        NewHeight = CurrentHeight
+                elif CustomAspect < 1:
+                    NewWidth = math.ceil(CurrentHeight * CustomAspect)
+                    if NewWidth >= MaxWidth:
+                        NewWidth = MaxWidth
+                        NewHeight = math.ceil(NewWidth / CustomAspect)
+                        if NewHeight >= MaxHeight:
+                            NewHeight = MaxHeight
+                            NewWidth = math.ceil(NewHeight * CustomAspect)
+                    else:
+                        NewHeight = CurrentHeight
+                else:
+                    return
+                # Final Check to see if the values are out of bounds and if so, set them to the max values
+                if NewHeight >= MaxHeight:
+                    NewHeight = MaxHeight
+                    NewWidth = math.ceil(NewHeight * CustomAspect)
+                elif NewWidth >= MaxWidth:
+                    NewWidth = MaxWidth
+                    NewHeight = math.ceil(NewWidth / CustomAspect)
+                # Update the Height and Width Input Fields
+                self.RS_ImageHeightVar.set(int(NewHeight))
+                self.RS_ImageWidthVar.set(int(NewWidth))
+                # Update the Red Square accordingly
+                self.UpdateRedSquare()
+            else:
+                # Making sure the value entered does not exceed the maximum size of the image
                 if CurrentHeight > MaxHeight:
-                    # Set the Height to the Max Height
-                    self.RS_ImageHeightVar.set(MaxHeight)
+                    self.RS_ImageHeightVar.set(int(MaxHeight))
+                    self.UpdateRedSquare()
+                    return
         else:
             return
     
@@ -895,13 +994,9 @@ class App(CTk):
             # Set the Variables to Width and Height again as a reset
             self.RS_CustomAspectRatioXVar.set("Height")
             self.RS_CustomAspectRatioYVar.set("Width")
-            # Disable the LockWidthHeightSwitch
-            self.LockWidthHeightSwitch.configure(state="disabled", button_color="grey", fg_color="grey")
-            # For sanity enable and set both the Width and Height Input Fields tro default
-            self.RS_HeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            self.RS_WidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            # Switch the LockWidthHeightSwitch to the Left
-            self.LockWidthHeightSwitchSide.set(False)
+            # Toggle off the Keep Aspect Ratio Switch
+            if self.LockAspectRatio.get() == 1:
+                self.LockAspectRatio.toggle()
         else:
             # Enable the Input fields for the Custom Aspect Ratio
             self.RS_CustomAspectRatioXInput.configure(state="normal", border_color="#565B5E", text_color="white")
@@ -909,30 +1004,9 @@ class App(CTk):
             # Set the variables to blank strings
             self.RS_CustomAspectRatioXVar.set("")
             self.RS_CustomAspectRatioYVar.set("")
-            # Enable the LockWidthHeightSwitch
-            self.LockWidthHeightSwitch.configure(state="normal", fg_color="red")
-            # Disable the Height Input Field
-            self.RS_HeightInput.configure(state="disabled", border_color="red", text_color="grey")
-            # Switch the LockWidthHeightSwitch to the Left
-            self.LockWidthHeightSwitchSide.set(False)
-    
-    def LockCustomAspectRatio(self):
-        """
-        Description
-        -----------
-        Locks the Height Input of the Red Square if the Aspect Ratio Switch has been toggled.\n
-        """
-        
-        # Check if the Custom Aspect Ratio has been enable first
-        if self.CustomAspectRatioSwitch.get() == 0:
-            return
-        # Disable the height input field if the switch is toggled on
-        if self.LockWidthHeightSwitch.get() == 1:
-            self.RS_HeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
-            self.RS_WidthInput.configure(state="disabled", border_color="red", text_color="grey")
-        else:
-            self.RS_HeightInput.configure(state="disabled", border_color="red", text_color="grey")
-            self.RS_WidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
+            # Toggle on the Keep Aspect Ratio Switch
+            if self.LockAspectRatio.get() == 0:
+                self.LockAspectRatio.toggle()
             
     def UpdateRedSquare(self):
         """
@@ -940,45 +1014,49 @@ class App(CTk):
         -----------
         Brains behind the Red Square, needs some reworking to work with the new Custom Aspect Ratio Stuff.
         """
-        
+
         # Get the New Width and Height
         NewWidth = int(self.RS_ImageWidthVar.get())
         NewHeight = int(self.RS_ImageHeightVar.get())
 
         # if the Aspect Ratio Switch is toggled on
-        if self.LockAspectRatio.get() == 1:
-            # Keep the aspect ratio and update the Width and Height to preserve the aspect ratio, round up to the nearest whole number
+        if self.LockAspectRatio.get() == 1 and not self.CustomAspectRatioSwitch.get() == 1:
+            # Update the Width and Height according to the Aspect Ratio
             if NewWidth > NewHeight:
                 NewHeight = math.ceil(NewWidth / self.AspectRatio)
+                if NewHeight > self.ResizedHeight:
+                    NewHeight = self.ResizedHeight
+                    NewWidth = math.ceil(NewHeight * self.AspectRatio)
             elif NewHeight > NewWidth:
                 NewWidth = math.ceil(NewHeight * self.AspectRatio)
-            else:
-                pass
+                if NewWidth > self.ResizedWidth:
+                    NewWidth = self.ResizedWidth
+                    NewHeight = math.ceil(NewWidth / self.AspectRatio)
         
-        # If the Custom aspect ratio switch is toggled on
-        if self.CustomAspectRatioSwitch.get() == 1:
+        # Use Custom Aspect if both switches are toggled. (Happens when the Custom Aspect Ratio is enabled)
+        if self.LockAspectRatio.get() == 1 and self.CustomAspectRatioSwitch.get() == 1:
             # Grab the Custom Aspect Ratio Values
             CustomAspectWidth, CustomAspectHeight = int(self.RS_CustomAspectRatioXVar.get()), int(self.RS_CustomAspectRatioYVar.get())
             AspectRatioValue = CustomAspectWidth / CustomAspectHeight
-            if NewWidth / NewHeight > AspectRatioValue:
+            # Use CustomAspectRatioValue to calculate the new Width and Height
+            if NewWidth > NewHeight:
                 NewHeight = math.ceil(NewWidth / AspectRatioValue)
-                # Check if the value goes out of bounds of the original image and scale down both values if they do
                 if NewHeight > self.ResizedHeight:
                     NewHeight = self.ResizedHeight
                     NewWidth = math.ceil(NewHeight * AspectRatioValue)
-                    NewHeight = math.ceil(NewWidth / AspectRatioValue)
-            elif NewWidth / NewHeight < AspectRatioValue:
+            elif NewHeight > NewWidth:
                 NewWidth = math.ceil(NewHeight * AspectRatioValue)
-                # Check if the value goes out of bounds of the original image and scale down both values if they do
                 if NewWidth > self.ResizedWidth:
                     NewWidth = self.ResizedWidth
                     NewHeight = math.ceil(NewWidth / AspectRatioValue)
-                    NewWidth = math.ceil(NewHeight * AspectRatioValue)
-            else:
-                pass
         
-        # Update the SquareObject
-        self.SquareObject.Update(Width=NewWidth, Height=NewHeight)
+        # Check if the Keep Square Center Switch is toggled on
+        if self.LockCenterSwitch.get() == 1:
+            # Update the Red Square to be in the center of the image
+            self.CenterRedSquare(Width=NewWidth, Height=NewHeight)
+        else:
+            # Update the SquareObject
+            self.SquareObject.Update(Width=NewWidth, Height=NewHeight)
         
         # Simplified Width and Height Calculation for the Variables
         self.CommonDivisor = math.gcd(NewWidth, NewHeight)
@@ -994,46 +1072,22 @@ class App(CTk):
         self.RS_ImageHeightVar.set(int(NewHeight))
         self.RS_ImageWidthVar.set(int(NewWidth))
         
-    def CenterRedSquare(self):
+    def CenterRedSquare(self, Width: int = None, Height: int = None):
         """
         Description
         -----------
-        Function to Center the Red Square on the Image.\n
-        Not working a 100% Needs some more tweaks
+        Function to Center the Red Square on the Image.
         """
         
-        # Get the width and height of the image
-        ImageWidth = self.canvas.winfo_width()
-        ImageHeight = self.canvas.winfo_height()
-
-        # Get the width and height of the square
-        SquareWidth = self.SquareObject.Width
-        SquareHeight = self.SquareObject.Height
-        
-        # Get the X and Y of the square
-        SquareX = self.SquareObject.X
-        SquareY = self.SquareObject.Y
-
-        # Get the center of the image
-        ImageCenterX = ImageWidth / 2
-        ImageCenterY = ImageHeight / 2
-
-        # Get the center of the square
-        SquareCenterX = SquareX + SquareWidth / 2
-        SquareCenterY = SquareY + SquareHeight / 2
-
-        # Get the difference between the center of the image and the center of the square
-        DifferenceX = ImageCenterX - SquareCenterX
-        DifferenceY = ImageCenterY - SquareCenterY
-        
-        # If the Difference is less than one, set it to 0. To Avoid rounding errors
-        if DifferenceX < 1:
-            DifferenceX = 0
-        if DifferenceY < 1:
-            DifferenceY = 0
-
-        # Move the square by the difference
-        self.SquareObject.Update(X=SquareX + DifferenceX, Y=SquareY + DifferenceY)
+        # Check if both instances of the Square and Image even are a thing
+        if self.PreviewImage and self.SquareObject:
+            
+            # Image Center
+            ImageCenterX = self.CanvasWidth / 2
+            ImageCenterY = self.CanvasHeight / 2
+            
+            # Position the Red Square in the center of the image
+            self.SquareObject.Update(X=ImageCenterX - self.SquareObject.Width / 2, Y=ImageCenterY - self.SquareObject.Height / 2, Width=Width, Height=Height)
 
     def LoadDirectory(self):
         """
@@ -1068,6 +1122,10 @@ class App(CTk):
         self.EnableInteract(self.CropButton)
         self.EnableInteract(self.RS_CenterSquareButton)
         self.EnableInteract(self.RS_UpdateSquareButton)
+        
+        # Custom enable the Width and Height input fields for the Red Square
+        self.RS_WidthInput.configure(state="normal", border_color="#565B5E", text_color="white")
+        self.RS_HeightInput.configure(state="normal", border_color="#565B5E", text_color="white")
 
         # Load the first image
         self.ImageIndex = 0
@@ -1142,7 +1200,7 @@ class App(CTk):
         self.OriginalCropImage = IMG.open(f"{self.dir_path}/{ImageName}")
         
         # Grab that Area from the scaled image and downscale the cropped bit to the original size
-        CroppedImage = self.OriginalCropImage.crop(FullCrop).resize((self.ImageWidth, self.ImageHeight), IMG.Resampling.LANCZOS)
+        CroppedImage = self.OriginalCropImage.crop(FullCrop).resize((SquareWidth, SquareWidth), IMG.Resampling.LANCZOS)
         
         # Create OutPut Directory if it doesn't exist
         if not os.path.exists(f"{self.dir_path}/Output"):
@@ -1176,7 +1234,7 @@ class App(CTk):
         # Remove the Image from the Canvas and load the new image
         if self.ImageIndex < len(self.ImageFiles) - 1:
             self.ImageIndex += 1
-            self.canvas.delete("all")
+            self.Canvas.delete("all")
             self.LoadImage(self.ImageIndex)
             self.EnableInteract(self.PreviousImageButton)
         else:
@@ -1196,7 +1254,7 @@ class App(CTk):
         # Remove the Image from the Canvas and load the new image
         if self.ImageIndex > 0:
             self.ImageIndex -= 1
-            self.canvas.delete("all")
+            self.Canvas.delete("all")
             self.LoadImage(self.ImageIndex)
             self.EnableInteract(self.NextImageButton)
         else:
@@ -1209,17 +1267,12 @@ class App(CTk):
         Resets the Red Square to the original Size and Position.
         """
 
-        # Grab values for the Width, Height and Position of the Image
-        Width = self.ImageWidth * self.Zoom
-        Height = self.ImageHeight * self.Zoom
-        X, Y = self.ImageX, self.ImageY
-        
         # Update the SquareObject
-        self.SquareObject.Update(X=X, Y=Y, Width=Width, Height=Height)
+        self.SquareObject.Update(X=self.ImageX, Y=self.ImageY, Width=self.ResizedWidth, Height=self.ResizedHeight)
         
         # Update the Red Square Input Fields
-        self.RS_ImageWidthVar.set(int(Width))
-        self.RS_ImageHeightVar.set(int(Height))
+        self.RS_ImageWidthVar.set(int(self.ResizedWidth))
+        self.RS_ImageHeightVar.set(int(self.ResizedHeight))
 
     def PressButton(self, Direction: str):
         """
@@ -1311,15 +1364,15 @@ class App(CTk):
         self.IF_OriginalDimension_HeightVar.set(self.ImageHeight)
 
         # Resize the image to fit the canvas
-        CanvasWidth, CanvasHeight = self.canvas.winfo_width(), self.canvas.winfo_height()
+        self.CanvasWidth, self.CanvasHeight = self.Canvas.winfo_width(), self.Canvas.winfo_height()
         
         # Substract 1 to prevent the Red Square from being cut off
-        if self.AspectRatio > (CanvasWidth / CanvasHeight):
-            self.ResizedWidth = CanvasWidth - 1
-            self.ResizedHeight = int(CanvasWidth / self.AspectRatio) - 1
+        if self.AspectRatio > (self.CanvasWidth / self.CanvasHeight):
+            self.ResizedWidth = self.CanvasWidth - 1
+            self.ResizedHeight = int(self.CanvasWidth / self.AspectRatio) - 1
         else:
-            self.ResizedHeight = CanvasHeight - 1
-            self.ResizedWidth = int(CanvasHeight * self.AspectRatio) - 1
+            self.ResizedHeight = self.CanvasHeight - 1
+            self.ResizedWidth = int(self.CanvasHeight * self.AspectRatio) - 1
 
         # Resize the image
         self.PreviewImage = self.PreviewImage.resize((self.ResizedWidth, self.ResizedHeight), resample=IMG.Resampling.LANCZOS)
@@ -1328,11 +1381,11 @@ class App(CTk):
         self.PhotoImage = ImageTk.PhotoImage(self.PreviewImage)
 
         # Center the image on the canvas
-        self.ImageX = (CanvasWidth - self.ResizedWidth) // 2
-        self.ImageY = (CanvasHeight - self.ResizedHeight) // 2
+        self.ImageX = (self.CanvasWidth - self.ResizedWidth) // 2
+        self.ImageY = (self.CanvasHeight - self.ResizedHeight) // 2
         
         # Create the Image on the Canvas
-        self.ImageOnCanvas = self.canvas.create_image(self.ImageX, self.ImageY, image=self.PhotoImage, anchor="nw")
+        self.ImageOnCanvas = self.Canvas.create_image(self.ImageX, self.ImageY, image=self.PhotoImage, anchor="nw")
         
         # Calculate the Zoom Levels
         self.ZoomWidth = self.ResizedWidth / self.ImageWidth
@@ -1347,22 +1400,33 @@ class App(CTk):
         # Create the Square
         if self.KeepRedSquareSizeSwitch.get() and self.SquareObject is not None:
             # Use the stored properties
-            StartX, StartY, StoredWidth, StoredHeight = self.SquareObject.SquareProperties
+            StartX, StartY, MaxX, MaxY, StoredWidth, StoredHeight = self.SquareObject.SquareProperties
 
             # Create the Square Object and update the Red Square Input Fields
-            self.SquareObject = Square(self.canvas, StartX, StartY, StoredWidth, StoredHeight, "red")
+            self.SquareObject = Square(Canvas=self.Canvas,
+                                       X=StartX,
+                                       Y=StartY,
+                                       MaxX=MaxX,
+                                       MaxY=MaxY,
+                                       Width=StoredWidth,
+                                       Height=StoredHeight,
+                                       Color="red")
             self.RS_ImageWidthVar.set(StoredWidth)
             self.RS_ImageHeightVar.set(StoredHeight)
             self.SquareObject.Update(KeepSize=True)
         else:
             # Create the Square Object and update the Red Square Input Fields
-            self.SquareObject = Square(self.canvas, self.ImageX, self.ImageY, self.ResizedWidth, self.ResizedHeight, "red")
+            self.SquareObject = Square(Canvas=self.Canvas,
+                                       X=self.ImageX,
+                                       Y=self.ImageY,
+                                       MaxX=self.ImageX + self.ResizedWidth,
+                                       MaxY=self.ImageY + self.ResizedHeight,
+                                       Width=self.ResizedWidth,
+                                       Height=self.ResizedHeight,
+                                       Color="red")
             self.RS_ImageWidthVar.set(self.ResizedWidth)
             self.RS_ImageHeightVar.set(self.ResizedHeight)
             self.SquareObject.Update()
-        
-        # Store the Original Size of the image to reset the Square's size to the original size
-        self.OriginalSize = (self.ImageX, self.ImageY, self.ImageX + self.ResizedWidth, self.ImageY + self.ResizedWidth)
 
         # Update the New Dimensions Labels
         self.IF_NewDimension_WidthVar.set(round(self.SquareObject.Width / self.Zoom))
@@ -1486,7 +1550,7 @@ class App(CTk):
     
         # Section for Updating the Width when the Height is changed
         if WH == "Height":
-            if self.ResizeImageHeightVar.get() == "" or self.ResizeImageHeightVar.get() == "0":
+            if self.ResizeImageHeightVar.get() in ["", "0"]:
                 return
             if self.ResizeHeightLock.get():
                 NewSize = int(self.ResizeImageHeightVar.get()) * (self.ImageWidth / self.ImageHeight)
@@ -1511,7 +1575,7 @@ class App(CTk):
 
         # Section for Updating the Height when the Width is changed
         elif WH == "Width":
-            if self.ResizeImageWidthVar.get() == "" or self.ResizeImageWidthVar.get() == "0":
+            if self.ResizeImageWidthVar.get() in ["", "0"]:
                 return
             if self.ResizeWidthLock.get():
                 NewSize = int(self.ResizeImageWidthVar.get()) / (self.ImageWidth / self.ImageHeight)
@@ -1593,7 +1657,7 @@ class Square:
     As Such it needs to get updated when the image is resized or moved, hence this class.
     """
     
-    def __init__(self, Canvas: CTkCanvas, X: int, Y: int, Width: int, Height: int, Color="Red"):
+    def __init__(self, Canvas: CTkCanvas, X: int, Y: int, MaxX: int, MaxY: int, Width: int, Height: int, Color="Red"):
         """
         Description
         -----------
@@ -1603,6 +1667,8 @@ class Square:
         self.Canvas = Canvas
         self.X = X
         self.Y = Y
+        self.MaxX = MaxX
+        self.MaxY = MaxY
         self.Width = Width
         self.Height = Height
         self.Color = Color
@@ -1629,7 +1695,7 @@ class Square:
             self.Canvas.delete(self.ID)
         self.ID = self.Canvas.create_rectangle(self.X, self.Y, self.X + self.Width, self.Y + self.Height, outline=self.Color)
         if not KeepSize:
-            self.SquareProperties = (self.X, self.Y, self.Width, self.Height)
+            self.SquareProperties = (self.X, self.Y, self.MaxX, self.MaxY, self.Width, self.Height)
         else:
             pass
 
@@ -1657,14 +1723,28 @@ class Square:
         Type: :class:`None`
         """
 
-        # For better readability create a dict and go over the attrivutes.
-        Attributes = {"X": X, "Y": Y, "Width": Width, "Height": Height}
-        for Attribute, Value in Attributes.items():
-            if Value != None:
-                setattr(self, Attribute, Value)
-        # Update the Square Properties
-        self.SquareProperties = (self.X, self.Y, self.Width, self.Height)
-        # ReDraw the Square
+        if X != None:
+            if X > self.MaxX:
+                self.X = 0
+            else:
+                self.X = X
+        if Y != None:
+            if Y > self.MaxY:
+                self.Y = 0
+            else:
+                self.Y = Y
+        if Width != None:
+            if Width > self.MaxX:
+                self.Width = self.MaxX
+            else:
+                self.Width = Width
+        if Height != None:
+            if Height > self.MaxY:
+                self.Height = self.MaxY
+            else:
+                self.Height = Height
+            
+        self.SquareProperties = (self.X, self.Y, self.MaxX, self.MaxY, self.Width, self.Height)
         self.Draw(KeepSize)
 
 if __name__ == "__main__":
